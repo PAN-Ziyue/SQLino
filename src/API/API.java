@@ -15,6 +15,7 @@ public class API {
     private static String insert_value;
     private static String insert_table;
     private static String on_attribute;
+    private static String select_table;
     private static WhereCond temp_where_cond = new WhereCond();
     private static Attribute temp_attr = new Attribute();
 
@@ -22,6 +23,7 @@ public class API {
     private static ArrayList<WhereCond> where_condition = new ArrayList<WhereCond>();
     private static ArrayList<InsertVal> insert_value_list = new ArrayList<InsertVal>();
     private static ArrayList<Attribute> create_attr_list = new ArrayList<Attribute>();
+    private static ArrayList<String> select_attr_list = new ArrayList<String>();
 
     public API() {
         Clear();
@@ -37,6 +39,7 @@ public class API {
         where_condition.clear();
         insert_value_list.clear();
         create_attr_list.clear();
+        select_attr_list.clear();
     }
 
     public static void QueryDelete() {
@@ -66,7 +69,7 @@ public class API {
     }
 
     public static void QuerySelect() {
-
+        Clear();
     }
 
 
@@ -139,5 +142,12 @@ public class API {
         temp_primary_list.add(attr_name);
     }
 
+    public static void SetSelectAttr(String select_attr) {
+        select_attr_list.add(select_attr);
+    }
+
+    public static void SetSelectTable(String select_table) {
+        API.select_table = select_table;
+    }
 
 }

@@ -13,7 +13,7 @@ import java.util.HashSet;
 import java.util.regex.Pattern;
 
 public class Interpreter {
-    private static State state_code;
+    private static State state_code = State.IDLE;
 
     private static final HashSet<String> reserved_words = new HashSet<String>() {{
         add("SELECT");
@@ -75,7 +75,8 @@ public class Interpreter {
                         rst.append("\\27");
                         break;
                     default: {
-                        throw new SQLException(EType.SyntaxError, 1, "invalid escape character: \\" + input_string.charAt(i + 1));
+                        throw new SQLException(EType.SyntaxError, 1,
+                                "invalid escape character: \\" + input_string.charAt(i + 1));
                     }
                 }
                 i++;
@@ -128,7 +129,7 @@ public class Interpreter {
             if (token.equals(""))
                 continue;
             switch (state_code) {
-                case State.IDLE: {
+                case IDLE: {
                     if (token.equals("SELECT"))
                         state_code = State.SELECT;
                     else if (token.equals("QUIT")) {
@@ -149,7 +150,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.DELETE: {
+                case DELETE: {
                     if (token.equals("FROM")) {
                         state_code = State.DELETE_FROM;
                     } else {
@@ -157,7 +158,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.DELETE_FROM: {
+                case DELETE_FROM: {
                     if (CommonUtils.IsLegalName(token)) {
                         state_code = State.DELETE_TABLE_PARSED;
                         API.SetDeleteTable(token);
@@ -166,7 +167,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.DELETE_TABLE_PARSED: {
+                case DELETE_TABLE_PARSED: {
                     if (token.equals(";")) {
                         API.QueryDelete();
                         state_code = State.IDLE;
@@ -177,7 +178,8 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.DELETE_WHERE_PARSED: {
+                case DELETE_WHERE_PARSED:
+                case DELETE_AND_PARSED: {
                     if (CommonUtils.IsLegalExpr(token)) {
                         API.SetWhereExpr1(token);
                         state_code = State.DELETE_EXPR1_PARSED;
@@ -186,7 +188,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.DELETE_EXPR1_PARSED: {
+                case DELETE_EXPR1_PARSED: {
                     switch (token) {
                         case "=":
                             API.SetWhereCmp(CMP.EQUAL);
@@ -217,7 +219,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.DELETE_CMP_PARSED: {
+                case DELETE_CMP_PARSED: {
                     if (CommonUtils.IsLegalExpr(token)) {
                         API.SetWhereExpr2(token);
                         state_code = State.DELETE_EXPR2_PARSED;
@@ -226,7 +228,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.DELETE_EXPR2_PARSED: {
+                case DELETE_EXPR2_PARSED: {
                     if (token.equals("AND")) {
                         state_code = State.DELETE_AND_PARSED;
                     } else if (token.equals(";")) {
@@ -237,16 +239,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.DELETE_AND_PARSED: {
-                    if (CommonUtils.IsLegalExpr(token)) {
-                        API.SetWhereExpr1(token);
-                        state_code = State.SELECT_EXPR1_PARSED;
-                    } else {
-                        throw new SQLException(EType.SyntaxError, 8, "invalid where expression: " + token);
-                    }
-                }
-                break;
-                case State.EXECFILE: {
+                case EXECFILE: {
                     //if (token[0] == '\\') {
                     //	token.erase(0, 1);
                     //	string final_filename = "";
@@ -271,19 +264,20 @@ public class Interpreter {
                     state_code = State.IDLE;
                 }
                 break;
-                case State.QUIT:
+                case QUIT:
                     return;
-                case State.DROP: {
+                case DROP: {
                     if (token.equals("INDEX"))
                         state_code = State.DROP_INDEX;
                     else if (token.equals("TABLE"))
                         state_code = State.DROP_TABLE;
                     else {
-                        throw new SQLException(EType.SyntaxError, 11, "unreferenced DROP object, expect 'INDEX' or 'TABLE'");
+                        throw new SQLException(EType.SyntaxError, 11,
+                                "invalid DROP object, expect 'INDEX' or 'TABLE'");
                     }
                 }
                 break;
-                case State.DROP_INDEX: {
+                case DROP_INDEX: {
                     if (CommonUtils.IsLegalName(token)) {
                         state_code = State.DROP_INDEX_PARSED;
                         API.SetDropIndex(token);
@@ -292,7 +286,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.DROP_INDEX_PARSED: {
+                case DROP_INDEX_PARSED: {
                     if (token.equals(";")) {
                         API.QueryDropIndex();
                         state_code = State.IDLE;
@@ -301,7 +295,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.DROP_TABLE: {
+                case DROP_TABLE: {
                     if (CommonUtils.IsLegalName(token)) {
                         state_code = State.DROP_TABLE_PARSED;
                         API.SetDropTable(token);
@@ -310,7 +304,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.DROP_TABLE_PARSED: {
+                case DROP_TABLE_PARSED: {
                     if (token.equals(";")) {
                         API.QueryCreateTable();
                         state_code = State.IDLE;
@@ -319,7 +313,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.INSERT: {
+                case INSERT: {
                     if (token.equals("INTO"))
                         state_code = State.INTO;
                     else {
@@ -327,7 +321,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.INTO: {
+                case INTO: {
                     if (CommonUtils.IsLegalName(token)) {
                         API.SetInsertTable(token);
                         state_code = State.INSERT_PARSED;
@@ -336,7 +330,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.INSERT_PARSED: {
+                case INSERT_PARSED: {
                     if (token.equals("VALUES")) {
                         state_code = State.VALUES;
                     } else {
@@ -344,7 +338,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.VALUES: {
+                case VALUES: {
                     if (token.equals("(")) {
                         state_code = State.INSERT_LEFT_BRACKET;
                     } else {
@@ -352,7 +346,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.INSERT_LEFT_BRACKET: {
+                case INSERT_LEFT_BRACKET: {
                     if (token.equals(")")) {
                         throw new SQLException(EType.SyntaxError, 21, "cannot insert nothing to a table!");
                     } else if (CommonUtils.IsString(token)) {
@@ -369,7 +363,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.INSERT_VALUE_RECEIVED: {
+                case INSERT_VALUE_RECEIVED: {
                     if (token.equals(",")) {
                         state_code = State.INSERT_COMMA;
                     } else if (token.equals(")")) {
@@ -379,7 +373,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.INSERT_COMMA: {
+                case INSERT_COMMA: {
                     if (token.equals(")")) {
                         throw new SQLException(EType.SyntaxError, 22, "expect another insert value!");
                     } else if (CommonUtils.IsString(token)) {
@@ -396,7 +390,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.INSERT_RIGHT_BRACKET: {
+                case INSERT_RIGHT_BRACKET: {
                     if (token.equals(";")) {
                         API.QueryInsert();
                         state_code = State.IDLE;
@@ -405,7 +399,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.CREATE: {
+                case CREATE: {
                     if (token.equals("INDEX")) {
                         state_code = State.CREATE_INDEX;
                     } else if (token.equals("TABLE")) {
@@ -415,7 +409,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.CREATE_INDEX: {
+                case CREATE_INDEX: {
                     if (CommonUtils.IsLegalName(token)) {
                         API.SetCreateIndex(token);
                         state_code = State.CREATE_INDEX_PARSED;
@@ -424,7 +418,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.CREATE_INDEX_PARSED: {
+                case CREATE_INDEX_PARSED: {
                     if (token.equals("ON"))
                         state_code = State.ON;
                     else {
@@ -432,7 +426,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.ON: {
+                case ON: {
                     if (CommonUtils.IsLegalName(token)) {
                         API.SetOnTable(token);
                         state_code = State.CREATE_INDEX_TABLE_PARSED;
@@ -441,7 +435,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.CREATE_INDEX_TABLE_PARSED: {
+                case CREATE_INDEX_TABLE_PARSED: {
                     if (token.equals("("))
                         state_code = State.CREATE_INDEX_LEFT_BRACKET;
                     else {
@@ -449,7 +443,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.CREATE_INDEX_LEFT_BRACKET: {
+                case CREATE_INDEX_LEFT_BRACKET: {
                     if (CommonUtils.IsLegalName(token)) {
                         API.SetOnAttribute(token);
                         state_code = State.CREATE_INDEX_ATTR_PARSED;
@@ -458,7 +452,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.CREATE_INDEX_ATTR_PARSED: {
+                case CREATE_INDEX_ATTR_PARSED: {
                     if (token.equals(")"))
                         state_code = State.CREATE_INDEX_RIGHT_BRACKET;
                     else {
@@ -466,7 +460,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.CREATE_INDEX_RIGHT_BRACKET: {
+                case CREATE_INDEX_RIGHT_BRACKET: {
                     if (token.equals(";")) {
                         API.QueryCreateIndex();
                         state_code = State.IDLE;
@@ -475,7 +469,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.CREATE_TABLE: {
+                case CREATE_TABLE: {
                     if (CommonUtils.IsLegalName(token)) {
                         API.SetCreateTable(token);
                         state_code = State.CREATE_TABLE_PARSED;
@@ -484,7 +478,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.CREATE_TABLE_PARSED: {
+                case CREATE_TABLE_PARSED: {
                     if (token.equals("("))
                         state_code = State.CREATE_TABLE_LEFT_BRACKET;
                     else {
@@ -492,18 +486,19 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.CREATE_TABLE_LEFT_BRACKET: {
+                case CREATE_TABLE_LEFT_BRACKET: {
                     if (token.equals("PRIMARY")) {
                         state_code = State.CREATE_TABLE_PRIMARY;
                     } else if (CommonUtils.IsLegalName(token)) {
                         API.SetCreateAttr(token);
                         state_code = State.CREATE_ATTR_PARSED;
                     } else {
-                        throw new SQLException(EType.SyntaxError, 33, "invalid keyword, expect attribute or 'PRIMARY'");
+                        throw new SQLException(EType.SyntaxError, 33,
+                                "invalid keyword, expect attribute or 'PRIMARY'");
                     }
                 }
                 break;
-                case State.CREATE_TABLE_PRIMARY: {
+                case CREATE_TABLE_PRIMARY: {
                     if (token.equals("KEY"))
                         state_code = State.CREATE_PRIMARY_KEY;
                     else {
@@ -511,7 +506,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.CREATE_PRIMARY_KEY: {
+                case CREATE_PRIMARY_KEY: {
                     if (token.equals("("))
                         state_code = State.CREATE_PRIMARY_LEFT_BRACKET;
                     else {
@@ -519,7 +514,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.CREATE_PRIMARY_LEFT_BRACKET: {
+                case CREATE_PRIMARY_LEFT_BRACKET: {
                     if (CommonUtils.IsLegalName(token)) {
                         API.SetPrimary(token);
                         state_code = State.PRIMARY_ATTR_PARSED;
@@ -528,7 +523,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.PRIMARY_ATTR_PARSED: {
+                case PRIMARY_ATTR_PARSED: {
                     if (token.equals(")"))
                         state_code = State.CREATE_PRIMARY_RIGHT_BRACKET;
                     else {
@@ -536,7 +531,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.CREATE_PRIMARY_RIGHT_BRACKET: {
+                case CREATE_PRIMARY_RIGHT_BRACKET: {
                     if (token.equals(","))
                         state_code = State.CREATE_COMMA;
                     else if (token.equals(")"))
@@ -546,7 +541,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.CREATE_COMMA: {
+                case CREATE_COMMA: {
                     if (token.equals("PRIMARY")) {
                         state_code = State.CREATE_TABLE_PRIMARY;
                     } else if (CommonUtils.IsLegalName(token)) {
@@ -557,36 +552,45 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.CREATE_ATTR_PARSED: {
-                    if (token.equals("INT")) {
-                        API.SetAttrType(DataType.INT);
-                        state_code = State.CREATE_INT_PARSED;
-                    } else if (token.equals("FLOAT")) {
-                        API.SetAttrType(DataType.FLOAT);
-                        state_code = State.CREATE_FLOAT_PARSED;
-                    } else if (token.equals("CHAR")) {
-                        API.SetAttrType(DataType.CHAR);
-                        state_code = State.CREATE_CHAR_PARSED;
-                    } else {
-                        throw new SQLException(EType.SyntaxError, 40, "invalid attribute type: " + token);
+                case CREATE_ATTR_PARSED: {
+                    switch (token) {
+                        case "INT":
+                            API.SetAttrType(DataType.INT);
+                            state_code = State.CREATE_INT_PARSED;
+                            break;
+                        case "FLOAT":
+                            API.SetAttrType(DataType.FLOAT);
+                            state_code = State.CREATE_FLOAT_PARSED;
+                            break;
+                        case "CHAR":
+                            API.SetAttrType(DataType.CHAR);
+                            state_code = State.CREATE_CHAR_PARSED;
+                            break;
+                        default:
+                            throw new SQLException(EType.SyntaxError, 40, "invalid attribute type: " + token);
                     }
                 }
                 break;
-                case State.CREATE_INT_PARSED:
-                case State.CREATE_FLOAT_PARSED: {
-                    if (token.equals("UNIQUE")) {
-                        API.SetAttrUnique();
-                        state_code = State.UNIQUE_PARSED;
-                    } else if (token.equals(","))
-                        state_code = State.CREATE_COMMA;
-                    else if (token.equals(")"))
-                        state_code = State.CREATE_TABLE_RIGHT_BRACKET;
-                    else {
-                        throw new SQLException(EType.SyntaxError, 41, "invalid argument: " + token);
+                case CREATE_INT_PARSED:
+                case CREATE_FLOAT_PARSED:
+                case CHAR_RIGHT_BRACKET: {
+                    switch (token) {
+                        case "UNIQUE":
+                            API.SetAttrUnique();
+                            state_code = State.UNIQUE_PARSED;
+                            break;
+                        case ",":
+                            state_code = State.CREATE_COMMA;
+                            break;
+                        case ")":
+                            state_code = State.CREATE_TABLE_RIGHT_BRACKET;
+                            break;
+                        default:
+                            throw new SQLException(EType.SyntaxError, 41, "invalid argument: " + token);
                     }
                 }
                 break;
-                case State.CREATE_CHAR_PARSED: {
+                case CREATE_CHAR_PARSED: {
                     if (token.equals("("))
                         state_code = State.CHAR_LEFT_BRACKET;
                     else {
@@ -594,7 +598,7 @@ public class Interpreter {
                     }
                 }
                 break;
-                case State.CHAR_LEFT_BRACKET: {
+                case CHAR_LEFT_BRACKET: {
                     if (CommonUtils.IsInteger(token)) {
                         int length = Integer.parseInt(token);
                         if (length <= 0 || length > DefaultSetting.CHAR_MAX_LENGTH) {
@@ -605,209 +609,163 @@ public class Interpreter {
                             state_code = State.CHAR_BIT_PARSED;
                         }
                     } else {
-                        throw new SQLException(EType.SyntaxError, 44, token+" is not a valid char length");
+                        throw new SQLException(EType.SyntaxError, 44, token + " is not a valid char length");
                     }
                 }
                 break;
-                case State.CHAR_BIT_PARSED: {
+                case CHAR_BIT_PARSED: {
                     if (token.equals(")"))
                         state_code = State.CHAR_RIGHT_BRACKET;
                     else {
-                        throw new SQLException(EType.SyntaxError, 45, "invalid symbol, expect ')' to bracket char length");
+                        throw new SQLException(EType.SyntaxError, 45,
+                                "invalid symbol, expect ')' to bracket char length");
                     }
                 }
                 break;
-                case State.CHAR_RIGHT_BRACKET: {
-                    if (token.equals("UNIQUE")) {
-                        API.SetAttrUnique();
-                        state_code = State.UNIQUE_PARSED;
-                    } else if (token == ",")
+                case UNIQUE_PARSED: {
+                    if (token.equals(","))
                         state_code = State.CREATE_COMMA;
-                    else if (token == ")")
+                    else if (token.equals(")"))
                         state_code = State.CREATE_TABLE_RIGHT_BRACKET;
-                    else if (token != "") {
-                        PromptErr("[Syntax Error] invalid key word: " + token);
-                        api.create_table.Clear();
-                        state_code = State.IDLE;
-                        return;
+                    else {
+                        throw new SQLException(EType.SyntaxError, 41, "invalid argument: " + token);
                     }
                 }
                 break;
-                case State.UNIQUE_PARSED: {
-                    if (token == ",")
-                        state_code = State.CREATE_COMMA;
-                    else if (token == ")")
-                        state_code = State.CREATE_TABLE_RIGHT_BRACKET;
-                    else if (token != "") {
-                        PromptErr("[Syntax Error] invalid key word: " + token);
-                        api.create_table.Clear();
+                case CREATE_TABLE_RIGHT_BRACKET: {
+                    if (token.equals(";")) {
+                        API.QueryCreateTable();
                         state_code = State.IDLE;
-                        return;
+                    } else {
+                        throw new SQLException(EType.SyntaxError, 30, "invalid symbol, expect ';' to finish query");
                     }
                 }
                 break;
-                case State.CREATE_TABLE_RIGHT_BRACKET: {
-                    if (token == ";") {
-                        api.create_table.Query();
-                        state_code = State.IDLE;
-                    } else if (token != "") {
-                        PromptErr("[Syntax Error] expect ;");
-                        api.create_table.Clear();
-                        state_code = State.IDLE;
-                        return;
-                    }
-                }
-                break;
-                case State.SELECT: {
-                    if (token == "*") {
-                        api.select_query.SetSelectAll();
+                case SELECT: {
+                    if (token.equals("*")) {
                         state_code = State.SELECT_ALL;
-                    } else if (regex_match(token, regex("^[a-zA-Z0-9_]*$"))) {
-                        api.select_query.Insert(token);
+                    } else if (CommonUtils.IsLegalName(token)) {
+                        API.SetSelectAttr(token);
                         state_code = State.SELECT_ATTR;
-                    } else if (token != "") {
-                        PromptErr("[Syntax Error] invalid attribute name: " + token);
-                        api.select_query.Clear();
-                        state_code = State.IDLE;
-                        return;
+                    } else {
+                        throw new SQLException(EType.SyntaxError, 46, "invalid select attribute: " + token);
                     }
                 }
                 break;
-                case State.SELECT_ALL: {
-                    if (token == "FROM" || token == "from")
+                case SELECT_ALL: {
+                    if (token.equals("FROM"))
                         state_code = State.SELECT_FROM;
-                    else if (token != "") {
-                        PromptErr("[Syntax Error] expect FROM");
-                        api.select_query.Clear();
-                        state_code = State.IDLE;
-                        return;
+                    else {
+                        throw new SQLException(EType.SyntaxError, 47, "invalid argument, expect 'FROM'");
                     }
                 }
                 break;
-                case State.SELECT_ATTR: {
-                    if (token == ",")
+                case SELECT_ATTR: {
+                    if (token.equals(","))
                         state_code = State.SELECT_ATTR_COMMA;
-                    else if (token == "FROM" || token == "from")
+                    else if (token.equals("FROM"))
                         state_code = State.SELECT_FROM;
-                    else if (token != "") {
-                        PromptErr("[Syntax Error] invalid keyword: " + token);
-                        api.select_query.Clear();
-                        state_code = State.IDLE;
-                        return;
+                    else {
+                        throw new SQLException(EType.SyntaxError, 48, "invalid argument, expect 'FROM' or ','");
                     }
                 }
                 break;
-                case State.SELECT_FROM: {
-                    if (regex_match(token, regex("^[a-zA-Z0-9_]*$")))
+                case SELECT_FROM: {
+                    if (CommonUtils.IsLegalName(token)) {
                         state_code = State.SELECT_TABLE_PARSED;
-                    else if (token != "") {
-                        PromptErr("[Syntax Error] invalid table name: " + token);
-                        api.select_query.Clear();
-                        state_code = State.IDLE;
-                        return;
+                        API.SetSelectTable(token);
+                    } else {
+                        throw new SQLException(EType.SyntaxError, 49, "invalid select table: " + token);
                     }
                 }
                 break;
-                case State.SELECT_ATTR_COMMA: {
-                    if (regex_match(token, regex("^[a-zA-Z0-9_]*$"))) {
-                        api.select_query.Insert(token);
+                case SELECT_ATTR_COMMA: {
+                    if (CommonUtils.IsLegalName(token)) {
+                        API.SetSelectAttr(token);
                         state_code = State.SELECT_ATTR;
-                    } else if (token != "") {
-                        PromptErr("[Syntax Error] invalid attribute name: " + token);
-                        api.select_query.Clear();
-                        state_code = State.IDLE;
-                        return;
+                    } else {
+                        throw new SQLException(EType.SyntaxError, 46, "invalid select attribute: " + token);
                     }
                 }
                 break;
-                case State.SELECT_TABLE_PARSED: {
-                    if (token == ";") {
-                        api.select_query.Query(api.record_manager);
+                case SELECT_TABLE_PARSED: {
+                    if (token.equals(";")) {
+                        API.QuerySelect();
                         state_code = State.IDLE;
-                    } else if (token == "WHERE" || token == "where") {
+                    } else if (token.equals("WHERE")) {
                         state_code = State.SELECT_WHERE_PARSED;
-                    } else if (token != "") {
-                        PromptErr("[Syntax Error] invalid keyword: " + token);
-                        api.select_query.Clear();
-                        state_code = State.IDLE;
-                        return;
+                    } else {
+                        throw new SQLException(EType.SyntaxError, 50,
+                                "invalid keyword expect 'WHERE' condition or ';' to finish query");
                     }
                 }
                 break;
-                case State.SELECT_WHERE_PARSED: {
-                    if (is_expr(token)) {
-                        api.select_query.SetExpr1(token);
+                case SELECT_WHERE_PARSED: {
+                    if (CommonUtils.IsLegalExpr(token)) {
+                        API.SetWhereExpr1(token);
                         state_code = State.SELECT_EXPR1_PARSED;
-                    } else if (token != "") {
-                        PromptErr("[Syntax Error] invalid expression: " + token);
-                        api.select_query.Clear();
-                        state_code = State.IDLE;
-                        return;
+                    } else {
+                        throw new SQLException(EType.SyntaxError, 51, "invalid expression: " + token);
                     }
                 }
                 break;
-                case State.SELECT_EXPR1_PARSED: {
-                    if (token == "=") {
-                        api.select_query.SetCmp(EQUAL);
-                        state_code = State.SELECT_CMP_PARSED;
-                    } else if (token == "!=") {
-                        api.select_query.SetCmp(NOT_EQUAL);
-                        state_code = State.SELECT_CMP_PARSED;
-                    } else if (token == ">") {
-                        api.select_query.SetCmp(GREATER);
-                        state_code = State.SELECT_CMP_PARSED;
-                    } else if (token == "<") {
-                        api.select_query.SetCmp(LESS);
-                        state_code = State.SELECT_CMP_PARSED;
-                    } else if (token == ">=") {
-                        api.select_query.SetCmp(GREATER_EQUAL);
-                        state_code = State.SELECT_CMP_PARSED;
-                    } else if (token == "<=") {
-                        api.select_query.SetCmp(LESS_EQUAL);
-                        state_code = State.SELECT_CMP_PARSED;
-                    } else if (token != "") {
-                        PromptErr("[Syntax Error] invalid comparison expression: " + token);
-                        api.select_query.Clear();
-                        state_code = State.IDLE;
-                        return;
+                case SELECT_EXPR1_PARSED: {
+                    switch (token) {
+                        case "=":
+                            API.SetWhereCmp(CMP.EQUAL);
+                            state_code = State.SELECT_CMP_PARSED;
+                            break;
+                        case "!=":
+                            API.SetWhereCmp(CMP.NOT_EQUAL);
+                            state_code = State.SELECT_CMP_PARSED;
+                            break;
+                        case ">":
+                            API.SetWhereCmp(CMP.GREATER);
+                            state_code = State.SELECT_CMP_PARSED;
+                            break;
+                        case "<":
+                            API.SetWhereCmp(CMP.LESS);
+                            state_code = State.SELECT_CMP_PARSED;
+                            break;
+                        case ">=":
+                            API.SetWhereCmp(CMP.GREATER_EQUAL);
+                            state_code = State.SELECT_CMP_PARSED;
+                            break;
+                        case "<=":
+                            API.SetWhereCmp(CMP.LESS_EQUAL);
+                            state_code = State.SELECT_CMP_PARSED;
+                            break;
+                        default:
+                            throw new SQLException(EType.SyntaxError, 9, "invalid comparison expression: " + token);
                     }
                 }
                 break;
-                case State.SELECT_CMP_PARSED: {
-                    if (is_expr(token)) {
-                        api.select_query.SetWhereExpr(token);
+                case SELECT_CMP_PARSED: {
+                    if (CommonUtils.IsLegalExpr(token)) {
+                        API.SetWhereExpr2(token);
                         state_code = State.SELECT_EXPR2_PARSED;
-                    } else if (token != "") {
-                        PromptErr("[Syntax Error] invalid expression: " + token);
-                        api.select_query.Clear();
-                        state_code = State.IDLE;
-                        return;
+                    } else {
+                        throw new SQLException(EType.SyntaxError, 8, "invalid where expression: " + token);
                     }
                 }
                 break;
-                case State.SELECT_EXPR2_PARSED: {
-                    if (token == "AND" || token == "and") {
+                case SELECT_EXPR2_PARSED: {
+                    if (token.equals("AND")) {
                         state_code = State.SELECT_AND_PARSED;
-                    } else if (token == ";") {
-                        api.select_query.Query(api.record_manager);
+                    } else if (token.equals(";")) {
+                        API.QuerySelect();
                         state_code = State.IDLE;
-                    } else if (token != "") {
-                        PromptErr("[Syntax Error] invalid argument: " + token);
-                        api.select_query.Clear();
-                        state_code = State.IDLE;
-                        return;
+                    } else {
+                        throw new SQLException(EType.SyntaxError, 10, "invalid where argument: " + token);
                     }
                 }
                 break;
-                case State.SELECT_AND_PARSED: {
-                    if (is_expr(token)) {
-                        api.select_query.SetExpr1(token);
+                case SELECT_AND_PARSED: {
+                    if (CommonUtils.IsLegalExpr(token)) {
+                        API.SetWhereExpr1(token);
                         state_code = State.SELECT_EXPR1_PARSED;
-                    } else if (token != "") {
-                        PromptErr("[Syntax Error] invalid expression: " + token);
-                        api.select_query.Clear();
-                        state_code = State.IDLE;
-                        return;
+                    } else {
+                        throw new SQLException(EType.SyntaxError, 8, "invalid where expression: " + token);
                     }
                 }
                 break;
