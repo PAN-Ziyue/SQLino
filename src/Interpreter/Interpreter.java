@@ -1,9 +1,11 @@
 package Interpreter;
 
 import API.API;
+import Data.Attribute;
 import Data.CMP;
 import Data.DataType;
 import Utils.CommonUtils;
+import Utils.DefaultSetting;
 import Utils.EType;
 import Utils.SQLException;
 
@@ -535,120 +537,89 @@ public class Interpreter {
                 }
                 break;
                 case State.CREATE_PRIMARY_RIGHT_BRACKET: {
-                    if (token == ",")
+                    if (token.equals(","))
                         state_code = State.CREATE_COMMA;
-                    else if (token == ")")
+                    else if (token.equals(")"))
                         state_code = State.CREATE_TABLE_RIGHT_BRACKET;
-                    else if (token != "") {
-                        PromptErr("[Syntax Error] expect ) or ,");
-                        api.create_table.Clear();
-                        state_code = State.IDLE;
-                        return;
+                    else {
+                        throw new SQLException(EType.SyntaxError, 38, "invalid symbol, expect ')' or ','");
                     }
                 }
                 break;
                 case State.CREATE_COMMA: {
-                    if (token == "PRIMARY" || token == "primary") {
+                    if (token.equals("PRIMARY")) {
                         state_code = State.CREATE_TABLE_PRIMARY;
-                    } else if (regex_match(token, regex("^[a-zA-Z0-9_]*$"))) {
-                        api.create_table.InsertAttr(token);
+                    } else if (CommonUtils.IsLegalName(token)) {
+                        API.SetCreateAttr(token);
                         state_code = State.CREATE_ATTR_PARSED;
-                    } else if (token != "") {
-                        PromptErr("[Syntax Error] invalid keyword: " + token);
-                        api.create_table.Clear();
-                        state_code = State.IDLE;
-                        return;
+                    } else {
+                        throw new SQLException(EType.SyntaxError, 39, "invalid create attribute: " + token);
                     }
                 }
                 break;
                 case State.CREATE_ATTR_PARSED: {
-                    if (token == "INT" || token == "int") {
+                    if (token.equals("INT")) {
+                        API.SetAttrType(DataType.INT);
                         state_code = State.CREATE_INT_PARSED;
-                        api.create_table.InsertType(INT);
-                    } else if (token == "FLOAT" || token == "float") {
+                    } else if (token.equals("FLOAT")) {
+                        API.SetAttrType(DataType.FLOAT);
                         state_code = State.CREATE_FLOAT_PARSED;
-                        api.create_table.InsertType(FLOAT);
-                    } else if (token == "CHAR" || token == "char") {
+                    } else if (token.equals("CHAR")) {
+                        API.SetAttrType(DataType.CHAR);
                         state_code = State.CREATE_CHAR_PARSED;
-                        api.create_table.InsertType(CHAR);
-                    } else if (token != "") {
-                        PromptErr("[Syntax Error] invalid attribute type: " + token);
-                        api.create_table.Clear();
-                        state_code = State.IDLE;
-                        return;
+                    } else {
+                        throw new SQLException(EType.SyntaxError, 40, "invalid attribute type: " + token);
                     }
                 }
                 break;
-                case State.CREATE_INT_PARSED: {
-                    if (token == "UNIQUE" || token == "unique") {
-                        api.create_table.InsertUnique();
+                case State.CREATE_INT_PARSED:
+                case State.CREATE_FLOAT_PARSED: {
+                    if (token.equals("UNIQUE")) {
+                        API.SetAttrUnique();
                         state_code = State.UNIQUE_PARSED;
-                    } else if (token == ",")
+                    } else if (token.equals(","))
                         state_code = State.CREATE_COMMA;
-                    else if (token == ")")
+                    else if (token.equals(")"))
                         state_code = State.CREATE_TABLE_RIGHT_BRACKET;
-                    else if (token != "") {
-                        PromptErr("[Syntax Error] invalid key word: " + token);
-                        api.create_table.Clear();
-                        state_code = State.IDLE;
-                        return;
+                    else {
+                        throw new SQLException(EType.SyntaxError, 41, "invalid argument: " + token);
                     }
                 }
                 break;
                 case State.CREATE_CHAR_PARSED: {
-                    if (token == "(")
+                    if (token.equals("("))
                         state_code = State.CHAR_LEFT_BRACKET;
-                    else if (token != "") {
-                        PromptErr("[Syntax Error] invalid key word: " + token);
-                        api.create_table.Clear();
-                        state_code = State.IDLE;
-                        return;
+                    else {
+                        throw new SQLException(EType.SyntaxError, 42, "invalid symbol, expect '(' after 'CHAR'");
                     }
                 }
                 break;
-                case State.CREATE_FLOAT_PARSED: {
-                    if (token == "UNIQUE" || token == "unique") {
-                        api.create_table.InsertUnique();
-                        state_code = State.UNIQUE_PARSED;
-                    } else if (token == ",")
-                        state_code = State.CREATE_COMMA;
-                    else if (token == ")")
-                        state_code = State.CREATE_TABLE_RIGHT_BRACKET;
-                    else if (token != "") {
-                        PromptErr("[Syntax Error] invalid key word: " + token);
-                        api.create_table.Clear();
-                        state_code = State.IDLE;
-                        return;
-                    }
-                }
-                break;
-
                 case State.CHAR_LEFT_BRACKET: {
-                    if (regex_match(token, regex("^[0-9]*$"))) {
-                        api.create_table.InsertSize(stoi(token));
-                        state_code = State.CHAR_BIT_PARSED;
-                    } else if (token != "") {
-                        PromptErr("[Syntax Error] invalid char size: " + token);
-                        api.create_table.Clear();
-                        state_code = State.IDLE;
-                        return;
+                    if (CommonUtils.IsInteger(token)) {
+                        int length = Integer.parseInt(token);
+                        if (length <= 0 || length > DefaultSetting.CHAR_MAX_LENGTH) {
+                            throw new SQLException(EType.SyntaxError, 43,
+                                    "invalid char length, expect between [0~" + DefaultSetting.CHAR_MAX_LENGTH + "]!");
+                        } else {
+                            API.SetAttrLength(length);
+                            state_code = State.CHAR_BIT_PARSED;
+                        }
+                    } else {
+                        throw new SQLException(EType.SyntaxError, 44, token+" is not a valid char length");
                     }
                 }
                 break;
                 case State.CHAR_BIT_PARSED: {
-                    if (token == ")")
+                    if (token.equals(")"))
                         state_code = State.CHAR_RIGHT_BRACKET;
-                    else if (token != "") {
-                        PromptErr("[Syntax Error] invalid keyword: " + token);
-                        api.create_table.Clear();
-                        state_code = State.IDLE;
-                        return;
+                    else {
+                        throw new SQLException(EType.SyntaxError, 45, "invalid symbol, expect ')' to bracket char length");
                     }
                 }
                 break;
                 case State.CHAR_RIGHT_BRACKET: {
-                    if (token == "UNIQUE" || token == "unique") {
-                        api.create_table.InsertUnique();
+                    if (token.equals("UNIQUE")) {
+                        API.SetAttrUnique();
                         state_code = State.UNIQUE_PARSED;
                     } else if (token == ",")
                         state_code = State.CREATE_COMMA;

@@ -131,8 +131,8 @@ public class API {
         temp_attr.length = length;
     }
 
-    public static void SetAttrUnique(boolean unique) {
-        temp_attr.unique = unique;
+    public static void SetAttrUnique() {
+        temp_attr.unique = true;
     }
 
     public static void SetPrimary(String attr_name) {
