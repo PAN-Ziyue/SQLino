@@ -12,4 +12,6 @@ public class DefaultSetting {
     public static final String INDEX_CATALOG_PATH = DB_PATH + "/index.catalog";
     public static final String TABLE_DIR = DB_PATH + "/Table";
     public static final String INDEX_DIR = DB_PATH + "/Index";
+
+    public static final int BP_ORDER = 100;
 }
