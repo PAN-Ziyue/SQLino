@@ -28,6 +28,10 @@ public class CommonUtils {
         add("PRIMARY");
     }};
 
+    public static boolean IsReservedWord(String token) {
+        return reserved_words.contains(token);
+    }
+
 
     public static boolean IsLegalExpr(String token) throws SQLException {
         return IsLegalName(token)
@@ -37,7 +41,7 @@ public class CommonUtils {
     }
 
     public static boolean IsLegalName(String token) throws SQLException {
-        if(reserved_words.contains(token))
+        if (reserved_words.contains(token))
             throw new SQLException(EType.SyntaxError, 0, "invalid keyword, identifier cannot be reserved words");
         return Pattern.matches("^[a-zA-Z_][a-zA-Z0-9_]*$", token);
     }
@@ -69,10 +73,10 @@ public class CommonUtils {
         String[] char_lists = token.split("\\\\");
         StringBuilder rst = new StringBuilder();
         for (String char_num : char_lists) {
-            if(char_num.equals(""))
+            if (char_num.equals(""))
                 continue;
             int num = Integer.parseInt(char_num, 16);
-            rst.append((char)num);
+            rst.append((char) num);
         }
         return rst.toString();
     }

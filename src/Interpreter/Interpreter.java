@@ -1,16 +1,13 @@
 package Interpreter;
 
 import API.API;
-import Data.Attribute;
-import Data.CMP;
-import Data.DataType;
+import Data.*;
 import Utils.CommonUtils;
 import Utils.DefaultSetting;
 import Utils.EType;
 import Utils.SQLException;
-
 import java.util.HashSet;
-import java.util.regex.Pattern;
+
 
 public class Interpreter {
     private static State state_code = State.IDLE;
@@ -36,10 +33,6 @@ public class Interpreter {
         add("INDEX");
         add("TABLE");
     }};
-
-    public Interpreter() {
-        state_code = State.IDLE;
-    }
 
     public static void SetState(State set_state_code) {
         state_code = set_state_code;
@@ -125,7 +118,10 @@ public class Interpreter {
     public static void ReadInput(String input_string) throws SQLException {
         String[] tokens = input_string.split("\\s+");
         for (String token : tokens) {
-            token = token.toUpperCase();
+            String upper_token = token.toUpperCase();
+            if(CommonUtils.IsReservedWord(upper_token)) {
+                token = upper_token;
+            }
             if (token.equals(""))
                 continue;
             switch (state_code) {
@@ -516,8 +512,10 @@ public class Interpreter {
                 break;
                 case CREATE_PRIMARY_LEFT_BRACKET: {
                     if (CommonUtils.IsLegalName(token)) {
-                        API.SetPrimary(token);
-                        state_code = State.PRIMARY_ATTR_PARSED;
+                        if(API.SetPrimary(token))
+                            state_code = State.PRIMARY_ATTR_PARSED;
+                        else
+                            throw new SQLException(EType.RuntimeError, 0, "cannot define primary key on multiple attributes");
                     } else {
                         throw new SQLException(EType.SyntaxError, 36, "invalid primary attribute name: " + token);
                     }

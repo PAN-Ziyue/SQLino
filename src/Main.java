@@ -1,7 +1,9 @@
 
 import API.API;
+import CatalogManager.CatalogManager;
 import Interpreter.Interpreter;
 import Interpreter.State;
+
 
 import java.io.*;
 
@@ -10,7 +12,14 @@ public class Main {
         int argv = args.length;
         switch (argv) {
             case 0: {
-                System.out.println("\u001B[32m" + "\n\n\t*** Welcome to MiniSQL System ***" + "\u001B[0m");
+                System.out.println("\u001B[32m" + "\n\t*** Welcome to MiniSQL System ***" + "\u001B[0m");
+                try {
+                    API.Initialize();
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                    System.exit(-1);
+                }
+
                 BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
                 String input_string;
                 while (Interpreter.GetState() != State.QUIT) {
@@ -31,7 +40,7 @@ public class Main {
                         }
                     }
                 }
-                System.out.println("\u001B[32m" + "\n\t*** Bye ***\n\n" + "\u001B[0m");
+                System.out.println("\u001B[32m" + "\n\t*** Bye ***" + "\u001B[0m");
             }
             break;
             case 1: {
