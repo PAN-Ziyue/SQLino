@@ -3,11 +3,13 @@ package CatalogManager;
 import Data.*;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
 import Utils.DefaultSetting;
 import Utils.EType;
 import Utils.SQLException;
+import org.w3c.dom.Attr;
 
 public class CatalogManager {
     public static LinkedHashMap<String, Table> table_list =
@@ -15,7 +17,6 @@ public class CatalogManager {
 
     public static LinkedHashMap<String, Index> index_list =
             new LinkedHashMap<String, Index>();
-
 
     public static void Initialize() throws IOException, ClassNotFoundException {
         InitTableCatalog();
@@ -27,22 +28,30 @@ public class CatalogManager {
         StoreIndexCatalog();
     }
 
-    private static void InitTableCatalog() throws IOException, ClassNotFoundException {
-        FileInputStream input_file = new FileInputStream(
-                DefaultSetting.TABLE_CATALOG_PATH);
-        ObjectInputStream in = new ObjectInputStream(input_file);
-        table_list = (LinkedHashMap<String, Table>) in.readObject();
-        in.close();
-        input_file.close();
+    private static void InitTableCatalog() throws IOException {
+        try {
+            FileInputStream input_file = new FileInputStream(
+                    DefaultSetting.TABLE_CATALOG_PATH);
+            ObjectInputStream in = new ObjectInputStream(input_file);
+            table_list = (LinkedHashMap<String, Table>) in.readObject();
+            in.close();
+            input_file.close();
+        } catch (Exception e) {
+            StoreTableCatalog();
+        }
     }
 
-    private static void InitIndexCatalog() throws IOException, ClassNotFoundException {
-        FileInputStream input_file = new FileInputStream(
-                DefaultSetting.INDEX_CATALOG_PATH);
-        ObjectInputStream in = new ObjectInputStream(input_file);
-        index_list = (LinkedHashMap<String, Index>) in.readObject();
-        in.close();
-        input_file.close();
+    private static void InitIndexCatalog() throws IOException {
+        try {
+            FileInputStream input_file = new FileInputStream(
+                    DefaultSetting.INDEX_CATALOG_PATH);
+            ObjectInputStream in = new ObjectInputStream(input_file);
+            index_list = (LinkedHashMap<String, Index>) in.readObject();
+            in.close();
+            input_file.close();
+        } catch (Exception e) {
+            StoreIndexCatalog();
+        }
     }
 
     private static void StoreTableCatalog() throws IOException {
@@ -62,6 +71,21 @@ public class CatalogManager {
         out.close();
         output_file.close();
     }
+
+
+    //*
+    public static void CreateTable(
+            String table_name, ArrayList<Attribute> attr_list, String primary_key) {
+        Table new_table = new Table(table_name, attr_list, primary_key);
+        table_list.put(table_name, new_table);
+    }
+
+    public static void CreateTable(
+            String table_name, ArrayList<Attribute> attr_list) {
+        Table new_table = new Table(table_name, attr_list);
+        table_list.put(table_name, new_table);
+    }
+
 
     public static void ShowCatalog() {
 
@@ -100,6 +124,16 @@ public class CatalogManager {
     public static int GetRowNum(String table_name) {
         return GetTable(table_name).row_num;
     }
+
+    public static DataType GetAttrType(String table_name, String attr_name) {
+        Table tmp = table_list.get(table_name);
+        for (Attribute attr : tmp.attr_list) {
+            if(attr_name.equals(attr.name))
+                return attr.type;
+        }
+        return DataType.INT;
+    }
+
 
     public static boolean IsIndexExist(String index_name) {
         return index_list.containsKey(index_name);

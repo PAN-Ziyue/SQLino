@@ -4,12 +4,14 @@ import BufferManager.BufferManager;
 import CatalogManager.CatalogManager;
 import Data.*;
 import IndexManager.IndexManager;
+import RecordManager.RecordManager;
 import Utils.EType;
 import Utils.SQLException;
 import com.sun.xml.internal.ws.util.exception.LocatableWebServiceException;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 
 public class API {
 
@@ -47,8 +49,20 @@ public class API {
         }
     }
 
+    public static void Store() throws SQLException {
+        try {
+            CatalogManager.Store();
+            IndexManager.Store();
+        } catch (Exception e) {
+            throw new SQLException(EType.RuntimeError, 9,
+                    "failed to save ");
+        }
+    }
+
 
     public static void Clear() {
+        temp_primary = "";
+        temp_attr.Clear();
         primary_defined = false;
         where_condition.clear();
         insert_value_list.clear();
@@ -57,6 +71,49 @@ public class API {
     }
 
     //* query function
+    public static void QueryCreateTable() throws SQLException {
+        if (CatalogManager.IsTableExist(create_table)) {
+            throw new SQLException(EType.RuntimeError, 3,
+                    "failed to create table, " + create_table + " has already existed!");
+        } else {
+            HashSet<String> check_duplicate_attr = new HashSet<>();
+            for (Attribute attr : create_attr_list) {
+                if (check_duplicate_attr.contains(attr.name)) {
+                    throw new SQLException(EType.RuntimeError, 3,
+                            "failed to create table, " + attr.name + " has duplicate attributes!");
+                } else {
+                    check_duplicate_attr.add(attr.name);
+                }
+            }
+
+            if(primary_defined) {
+                boolean contain_primary = false;
+                for (Attribute attr : create_attr_list) {
+                    if(attr.name.equals(temp_primary)) {
+                        contain_primary = true;
+                        break;
+                    }
+                }
+                if(!contain_primary)
+                    throw new SQLException(EType.RuntimeError, 3,
+                            "failed to create table, " + temp_primary + " is not a defined attribute!");
+
+                RecordManager.CreateTable(create_table);
+                CatalogManager.CreateTable(create_table, create_attr_list, temp_primary);
+                String index_name = create_table + "_default_index";
+                Index index = new Index(index_name, create_table, temp_primary);
+                IndexManager.CreateIndex(index);
+                CatalogManager.CreateIndex(index);
+            } else {
+                RecordManager.CreateTable(create_table);
+                CatalogManager.CreateTable(create_table, create_attr_list);
+            }
+        }
+        Store();
+        Clear();
+    }
+
+
     public static void QueryDelete() throws SQLException {
 
         Clear();
@@ -104,9 +161,6 @@ public class API {
         Clear();
     }
 
-    public static void QueryCreateTable() throws SQLException {
-
-    }
 
     public static void QuerySelect() throws SQLException {
 
