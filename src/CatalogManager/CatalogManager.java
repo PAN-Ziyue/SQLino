@@ -131,7 +131,6 @@ public class CatalogManager {
         return DataType.INT;
     }
 
-
     public static boolean IsIndexExist(String index_name) {
         return index_list.containsKey(index_name);
     }

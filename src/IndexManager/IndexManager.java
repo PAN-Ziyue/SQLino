@@ -1,9 +1,10 @@
 package IndexManager;
 
+import BufferManager.BufferManager;
 import CatalogManager.CatalogManager;
 import Data.*;
-import Utils.DefaultSetting;
-import Utils.SQLException;
+import Utils.*;
+import BufferManager.Block;
 
 import java.io.*;
 import java.util.LinkedHashMap;
@@ -74,28 +75,41 @@ public class IndexManager {
 
     //* SQL operations
     public static void CreateIndex(Index index) throws SQLException {
-        int tuple_name = CatalogManager.GetRowNum(index.table_name);
+        int block_offset = 0, row_count = 0, byte_offset = 0;
+        int row_num = CatalogManager.GetRowNum(index.table_name);
+        int store_length = IndexManager.GetStoreLength(index.table_name);
         DataType type = CatalogManager.GetAttrType(index.table_name, index.attr_name);
+
+        Block tmp_block = BufferManager.ReadBlock(index.table_name, block_offset);
 
         switch (type) {
             case INT:
-                BPTree<Integer, Address> int_tree = new BPTree<Integer, Address>(DefaultSetting.BP_ORDER);
+                BPTree<Integer, Address> int_tree = new BPTree<Integer, Address>();
+                while (row_count < row_num) {
+                    if(byte_offset + store_length >= DefaultSetting.BLOCK_SIZE) {
+                        block_offset++;
+                        byte_offset = 0;
+                        tmp_block = BufferManager.ReadBlock(index.table_name, block_offset);
+                        if(tmp_block == null) {
+                            throw new SQLException(EType.RuntimeError, 0, "xxx");
+                        }
+                    }
+                    if(tmp_block.ReadInt(byte_offset) < 0) {
+                        Address value = new Address(index.table_name, block_offset, byte_offset);
+                        Tuple row_data = IndexManager.GetTuple();
+                    }
+                }
                 IntTreeMap.put(index.name, int_tree);
                 break;
             case FLOAT:
-                BPTree<Double, Address> float_tree = new BPTree<Double, Address>(DefaultSetting.BP_ORDER);
+                BPTree<Double, Address> float_tree = new BPTree<Double, Address>();
                 FloatTreeMap.put(index.name, float_tree);
                 break;
             case CHAR:
-                BPTree<String, Address> char_tree = new BPTree<String, Address>(DefaultSetting.BP_ORDER);
+                BPTree<String, Address> char_tree = new BPTree<String, Address>();
                 CharTreeMap.put(index.name, char_tree);
                 break;
         }
-
-//        int length = IndexManager.GetLength(index.table_name);
-//        int byte_offset = DefaultSetting.INT_SIZE;
-//        int block_offset = 0, count = 0;
-//        int attr_index = CatalogManager.GetAttrIndex(index.table_name, index.attr_name);
     }
 
 
@@ -118,7 +132,11 @@ public class IndexManager {
 
     //* utilities methods
 
-    public static int GetLength(String table_name) {
+    public static int GetStoreLength(String table_name) {
+//        int row_length = CatalogManager.GetRowLength(table_name);
+//        if(row_length > )
+
+
 //        int row_length = CatalogManager.GetRowLength(table_name);
 //        if(row_length > DefaultSetting.INT_SIZE) {
 //
@@ -126,5 +144,9 @@ public class IndexManager {
 //
 //        }
         return 0;
+    }
+
+    public static Tuple GetTuple(String table_name, Block block, int offset) {
+
     }
 }

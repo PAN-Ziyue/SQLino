@@ -10,13 +10,12 @@ import BufferManager.Block;
 
 public class RecordManager {
 
-
     public static void CreateTable(String table_name) throws SQLException {
         String file_path = DefaultSetting.TABLE_DIR + "/" + table_name + ".table";
         File table_file = new File(file_path);
         try {
             if (table_file.createNewFile()) {
-                Block table_block = BufferManager.ReadBlock(file_path, 0);
+                Block table_block = BufferManager.ReadBlock(table_name, 0);
                 table_block.WriteInt(-1, 0);
             }
         } catch (Exception e) {

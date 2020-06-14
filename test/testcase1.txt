@@ -1,3 +1,11 @@
-CREATE TABLE student (PRIMARY KEY(stuid), stuid INT, score FLOAT);
+CREATE TABLE student (iden_number CHAR(18) UNIQUE, PRIMARY KEY(stuid),  stuid INT, score FLOAT, name CHAR(20));
 
 DROP TABLE student;
+
+
+CREATE INDEX studentid ON student ( stuid);
+
+CREATE INDEX studentid ON student (name);
+
+CREATE INDEX student_iden ON student (iden_number);
+

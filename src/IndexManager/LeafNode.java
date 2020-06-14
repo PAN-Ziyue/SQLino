@@ -2,26 +2,29 @@ package IndexManager;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.*;
+import java.util.List;
+import java.util.ListIterator;
 
 public class LeafNode<K extends Comparable<K>, V> extends Node<K, V> implements Serializable {
     protected ArrayList<V> value_list;
     protected LeafNode<K, V> next_leaf;
     protected LeafNode<K, V> previous_leaf;
 
-    public LeafNode(K key, V value) {
-        is_leaf_node = true;
+    public LeafNode(K first_key, V first_value) {
+        is_leaf = true;
         key_list = new ArrayList<K>();
         value_list = new ArrayList<V>();
-        key_list.add(key);
-        value_list.add(value);
+        key_list.add(first_key);
+        value_list.add(first_value);
+
     }
 
-    public LeafNode(List<K> keys, List<V> values) {
-        is_leaf_node = true;
-        key_list = new ArrayList<K>(keys);
-        value_list = new ArrayList<V>(values);
+    public LeafNode(List<K> new_key_list, List<V> new_value_list) {
+        is_leaf = true;
+        key_list = new ArrayList<K>(new_key_list);
+        value_list = new ArrayList<V>(new_value_list);
     }
+
 
     public void Insert(K key, V value) {
         if (key.compareTo(key_list.get(0)) < 0) {
@@ -40,6 +43,8 @@ public class LeafNode<K extends Comparable<K>, V> extends Node<K, V> implements 
                     break;
                 }
             }
+
         }
     }
+
 }

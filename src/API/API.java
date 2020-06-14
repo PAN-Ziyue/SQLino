@@ -49,6 +49,7 @@ public class API {
     public static void Store() throws SQLException {
         try {
             CatalogManager.Store();
+            BufferManager.Store();
             IndexManager.Store();
         } catch (Exception e) {
             throw new SQLException(EType.RuntimeError, 9,
@@ -62,8 +63,8 @@ public class API {
         temp_attr.Clear();
         primary_defined = false;
         where_condition.clear();
-        insert_value_list.clear();
-        create_attr_list.clear();
+        insert_value_list = new ArrayList<>();
+        create_attr_list = new ArrayList<>();
         select_attr_list.clear();
     }
 
@@ -85,10 +86,10 @@ public class API {
 
             if (primary_defined) {
                 boolean contain_primary = false;
-                for (Attribute attr : create_attr_list) {
-                    if (attr.name.equals(temp_primary)) {
+                for(int i=0; i<create_attr_list.size(); i++) {
+                    if(create_attr_list.get(i).name.equals(temp_primary)) {
                         contain_primary = true;
-                        attr.unique = true;                 // primary key must be unique
+                        create_attr_list.get(i).unique = true;// primary key must be unique
                         break;
                     }
                 }
@@ -147,26 +148,26 @@ public class API {
         if (CatalogManager.IsIndexExist(create_index)) {
             throw new SQLException(EType.RuntimeError, 6,
                     "this index has been created: " + create_index);
-        } else {
-            if (CatalogManager.IsTableExist(on_table)) {
-                if (CatalogManager.IsAttrExist(on_table, on_attribute)) {
-                    if (CatalogManager.IsIndexAttr(on_table, on_attribute)) {
-                        throw new SQLException(EType.RuntimeError, 8,
-                                "this attribute has been created on");
-                    } else {
-                        Index index = new Index(create_index, on_table, on_attribute);
-                        CatalogManager.CreateIndex(index);
-                        IndexManager.CreateIndex(index);
-                    }
-                } else {
-                    throw new SQLException(EType.RuntimeError, 7,
-                            "this attribute does not exist: " + on_attribute);
-                }
-            } else {
-                throw new SQLException(EType.RuntimeError, 5,
-                        "this table does not exist: " + on_table);
-            }
         }
+        if (!CatalogManager.IsTableExist(on_table)) {
+            throw new SQLException(EType.RuntimeError, 5,
+                    "this table does not exist: " + on_table);
+        }
+        if (!CatalogManager.IsAttrExist(on_table, on_attribute)) {
+            throw new SQLException(EType.RuntimeError, 7,
+                    "this attribute does not exist: " + on_attribute);
+        }
+        if (CatalogManager.IsIndexAttr(on_table, on_attribute)) {
+            throw new SQLException(EType.RuntimeError, 8,
+                    "this attribute has been created index on");
+        }
+        if (!CatalogManager.IsUnique(on_table, on_attribute)) {
+            throw new SQLException(EType.RuntimeError, 0, "xxx");
+        }
+        Index index = new Index(create_index, on_table, on_attribute);
+        CatalogManager.CreateIndex(index);
+        IndexManager.CreateIndex(index);
+        Store();
         Clear();
     }
 

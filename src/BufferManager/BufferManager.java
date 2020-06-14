@@ -33,7 +33,10 @@ public class BufferManager {
             if (buffer[i].is_valid && buffer[i].file_name.equals(file_name)
                     && buffer[i].block_offset == offset)
                 return i;
-        File file = new File(file_name);
+
+
+        String file_path = DefaultSetting.TABLE_DIR + "/" + file_name + ".table";
+        File file = new File(file_path);
         int bid = GetFreeBlockID();
         if (bid == -1)
             return bid;
@@ -58,7 +61,8 @@ public class BufferManager {
         if (i < DefaultSetting.BLOCK_NUM)
             return buffer[i];
         else {
-            File file = new File(file_name);
+            String file_path = DefaultSetting.TABLE_DIR + "/" + file_name + ".table";
+            File file = new File(file_path);
             int bid = GetFreeBlockID();
             if (bid == -1 || !file.exists())
                 return null;
@@ -73,7 +77,8 @@ public class BufferManager {
         byte[] data = new byte[DefaultSetting.BLOCK_NUM];
         RandomAccessFile raf = null;
         try {
-            File in = new File(file_name);
+            String file_path = DefaultSetting.TABLE_DIR + "/" + file_name + ".table";
+            File in = new File(file_path);
             raf = new RandomAccessFile(in, "rw");
             if((offset + 1) * DefaultSetting.BLOCK_SIZE <= raf.length()) {
                 raf.seek(offset * DefaultSetting.BLOCK_SIZE);
@@ -108,7 +113,8 @@ public class BufferManager {
         if (buffer[block_id].is_dirty) {
             RandomAccessFile raf = null;
             try {
-                File out = new File(buffer[block_id].file_name);
+                String file_path = DefaultSetting.TABLE_DIR + "/" + buffer[block_id].file_name + ".table";
+                File out = new File(file_path);
                 raf = new RandomAccessFile(out, "rw");
                 if (!out.exists())
                     out.createNewFile();

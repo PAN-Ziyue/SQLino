@@ -15,19 +15,18 @@ public class Block {
 
     public Block() {
         file_name = "";
-        LRU_count = -1;
-        block_offset = -1;
+        LRU_count = 0;
+        block_offset = 0;
         is_dirty = is_pinned = false;
-        is_valid = true;
+        is_valid = false;
         Arrays.fill(block_data, (byte) 0);
     }
 
 
     //* common utilities
     public void Reset() {
-        is_valid = true;
-        is_dirty = is_pinned = false;
-        LRU_count = block_offset = -1;
+        is_dirty = is_pinned = is_valid =false;
+        LRU_count = block_offset = 0;
     }
 
     public int GetLRU() {

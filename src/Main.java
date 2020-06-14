@@ -29,7 +29,7 @@ public class Main {
                         System.out.print("    ");
 
                     input_string = br.readLine();
-                    if(!input_string.equals("")){
+                    if (!input_string.equals("")) {
                         try {
                             input_string = Interpreter.ProcessInput(input_string);
                             Interpreter.ReadInput(input_string);
@@ -40,7 +40,13 @@ public class Main {
                         }
                     }
                 }
-                System.out.println("\u001B[32m" + "\n\t*** Bye ***" + "\u001B[0m");
+                try {
+                    API.Store();
+                    System.out.println("\u001B[32m" + "\n\t*** Bye ***" + "\u001B[0m");
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                    System.exit(-1);
+                }
             }
             break;
             case 1: {
