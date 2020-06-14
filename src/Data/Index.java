@@ -1,6 +1,8 @@
 package Data;
 
-public class Index {
+import java.io.Serializable;
+
+public class Index  implements Serializable {
     public String name;
     public String table_name;
     public String attr_name;

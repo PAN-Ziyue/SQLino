@@ -2,26 +2,51 @@ package BufferManager;
 
 import Utils.DefaultSetting;
 
+import java.util.Arrays;
+
 public class Block {
-    private int LRU_count = 0;
-    private int block_offset = 0;
-    private boolean is_dirty = false;
-    private boolean is_valid = false;
-    private boolean is_pinned = false;
-    private String file_name;
+    private int LRU_count;
+    public int block_offset;
+    public boolean is_dirty;
+    public boolean is_valid;
+    public boolean is_pinned;
+    public String file_name;
     private byte[] block_data = new byte[DefaultSetting.BLOCK_SIZE];
 
+    public Block() {
+        file_name = "";
+        LRU_count = -1;
+        block_offset = -1;
+        is_dirty = is_pinned = false;
+        is_valid = true;
+        Arrays.fill(block_data, (byte) 0);
+    }
 
+
+    //* common utilities
     public void Reset() {
-        is_dirty = is_pinned = is_valid = false;
-        LRU_count = 0;
+        is_valid = true;
+        is_dirty = is_pinned = false;
+        LRU_count = block_offset = -1;
     }
 
-    public boolean WriteData(int offset, byte[] data) {
-        if ()
+    public int GetLRU() {
+        return LRU_count;
     }
 
+    public byte[] GetBlockData() {
+        return block_data;
+    }
 
+    public void SetBlockData(byte[] block_data) {
+        this.block_data = block_data;
+    }
+
+    public void SetBlockData() {
+        Arrays.fill(block_data, (byte) 0);
+    }
+
+    //* read & write supported data type
     public int ReadInt(int offset) {
         if (offset + 4 > DefaultSetting.BLOCK_SIZE)
             return 0;
@@ -40,8 +65,12 @@ public class Block {
         return Double.longBitsToDouble(l);
     }
 
-    public String ReadChar(int offset) {
-
+    public String ReadChar(int length, int offset) {
+        byte[] char_bytes = new byte[length];
+        for (int i = 0; i < length && i < DefaultSetting.BLOCK_SIZE - offset; i++)
+            char_bytes[i] = block_data[offset + i];
+        LRU_count++;
+        return new String(char_bytes);
     }
 
     public void WriteInt(int value, int offset) {
@@ -66,7 +95,12 @@ public class Block {
     public void WriteChar(String value, int offset) {
         byte[] char_bytes = value.getBytes();
         if (offset + char_bytes.length <= DefaultSetting.BLOCK_SIZE) {
-            
+            for (int i = 0; i < char_bytes.length; i++)
+                block_data[offset + i] = char_bytes[i];
+            LRU_count++;
+            is_dirty = true;
         }
     }
+
+
 }

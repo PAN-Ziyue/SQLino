@@ -1,6 +1,8 @@
 package Data;
 
-public class Address implements Comparable<Address> {
+import java.io.Serializable;
+
+public class Address implements Comparable<Address>, Serializable {
     private String file_name;
     private int block_offset;
     private int byte_offset;

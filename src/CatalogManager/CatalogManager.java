@@ -6,10 +6,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
-import Utils.DefaultSetting;
-import Utils.EType;
-import Utils.SQLException;
-import org.w3c.dom.Attr;
+import Utils.*;
 
 public class CatalogManager {
     public static LinkedHashMap<String, Table> table_list =
@@ -73,17 +70,17 @@ public class CatalogManager {
     }
 
 
-    //*
-    public static void CreateTable(
-            String table_name, ArrayList<Attribute> attr_list, String primary_key) {
-        Table new_table = new Table(table_name, attr_list, primary_key);
-        table_list.put(table_name, new_table);
+    //* sql methods
+    public static void CreateTable(Table new_table) {
+        table_list.put(new_table.name, new_table);
     }
 
-    public static void CreateTable(
-            String table_name, ArrayList<Attribute> attr_list) {
-        Table new_table = new Table(table_name, attr_list);
-        table_list.put(table_name, new_table);
+    public static void DropTable(String table_name) {
+        Table tmp = GetTable(table_name);
+        for (int i = 0; i < tmp.index_list.size(); i++) {
+            index_list.remove(tmp.index_list.get(i).name);
+        }
+        table_list.remove(table_name);
     }
 
 
@@ -128,7 +125,7 @@ public class CatalogManager {
     public static DataType GetAttrType(String table_name, String attr_name) {
         Table tmp = table_list.get(table_name);
         for (Attribute attr : tmp.attr_list) {
-            if(attr_name.equals(attr.name))
+            if (attr_name.equals(attr.name))
                 return attr.type;
         }
         return DataType.INT;
@@ -208,4 +205,19 @@ public class CatalogManager {
 
     }
 
+    public static int GetAttrIndex(String table_name, String attr_name) throws SQLException {
+        Table tmp = table_list.get(table_name);
+        int index = 0;
+        for (Attribute attr : tmp.attr_list) {
+            if (attr.name.equals(attr_name))
+                return index;
+            index++;
+        }
+        throw new SQLException(EType.RuntimeError, 1,
+                table_name + "(table) does not exist");
+    }
+
+    public static int GetRowLength(String table_name) {
+        return GetTable(table_name).row_length;
+    }
 }

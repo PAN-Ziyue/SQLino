@@ -1,9 +1,10 @@
 package IndexManager;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.*;
 
-public class LeafNode<K extends Comparable<K>, V> extends Node<K, V> {
+public class LeafNode<K extends Comparable<K>, V> extends Node<K, V> implements Serializable {
     protected ArrayList<V> value_list;
     protected LeafNode<K, V> next_leaf;
     protected LeafNode<K, V> previous_leaf;

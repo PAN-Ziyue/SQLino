@@ -1,9 +1,10 @@
 package IndexManager;
 
+import java.io.Serializable;
 import java.util.*;
 import java.util.Map.Entry;
 
-public class IndexNode<K extends Comparable<K>, V> extends Node<K, V> {
+public class IndexNode<K extends Comparable<K>, V> extends Node<K, V> implements Serializable {
     protected ArrayList<Node<K, V>> children;
 
     public IndexNode(K key, Node<K, V> child0, Node<K, V> child1) {

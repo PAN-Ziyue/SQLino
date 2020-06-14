@@ -302,7 +302,7 @@ public class Interpreter {
                 break;
                 case DROP_TABLE_PARSED: {
                     if (token.equals(";")) {
-                        API.QueryCreateTable();
+                        API.QueryDropTable();
                         state_code = State.IDLE;
                     } else {
                         throw new SQLException(EType.SyntaxError, 13, "invalid token, expect ';' to finish query");
@@ -578,9 +578,11 @@ public class Interpreter {
                             state_code = State.UNIQUE_PARSED;
                             break;
                         case ",":
+                            API.SetCreateAttrList();
                             state_code = State.CREATE_COMMA;
                             break;
                         case ")":
+                            API.SetCreateAttrList();
                             state_code = State.CREATE_TABLE_RIGHT_BRACKET;
                             break;
                         default:
@@ -621,10 +623,14 @@ public class Interpreter {
                 }
                 break;
                 case UNIQUE_PARSED: {
-                    if (token.equals(","))
+                    if (token.equals(",")) {
+                        API.SetCreateAttrList();
                         state_code = State.CREATE_COMMA;
-                    else if (token.equals(")"))
+                    }
+                    else if (token.equals(")")) {
+                        API.SetCreateAttrList();
                         state_code = State.CREATE_TABLE_RIGHT_BRACKET;
+                    }
                     else {
                         throw new SQLException(EType.SyntaxError, 41, "invalid argument: " + token);
                     }

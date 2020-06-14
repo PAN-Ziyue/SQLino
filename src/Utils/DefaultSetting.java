@@ -13,5 +13,9 @@ public class DefaultSetting {
     public static final String TABLE_DIR = DB_PATH + "/Table";
     public static final String INDEX_DIR = DB_PATH + "/Index";
 
-    public static final int BP_ORDER = 100;
+    public static final int BP_ORDER = 6;
+
+    public static final int CHAR_SIZE = 1;
+    public static final int INT_SIZE = 4;
+    public static final int FLOAT_SIZE = 8;
 }

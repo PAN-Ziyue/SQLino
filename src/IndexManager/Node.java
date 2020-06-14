@@ -2,9 +2,10 @@ package IndexManager;
 
 import Utils.DefaultSetting;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Node<K extends Comparable<K>, V> {
+public class Node<K extends Comparable<K>, V> implements Serializable {
     protected boolean is_leaf_node;
     protected ArrayList<K> key_list;
 

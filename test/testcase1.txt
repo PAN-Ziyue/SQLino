@@ -1,0 +1,3 @@
+CREATE TABLE student (PRIMARY KEY(stuid), stuid INT, score FLOAT);
+
+DROP TABLE student;

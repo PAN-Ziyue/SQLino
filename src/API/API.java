@@ -2,16 +2,13 @@ package API;
 
 import BufferManager.BufferManager;
 import CatalogManager.CatalogManager;
-import Data.*;
+
 import IndexManager.IndexManager;
 import RecordManager.RecordManager;
-import Utils.EType;
-import Utils.SQLException;
-import com.sun.xml.internal.ws.util.exception.LocatableWebServiceException;
+import Utils.*;
+import Data.*;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.*;
 
 public class API {
 
@@ -86,33 +83,51 @@ public class API {
                 }
             }
 
-            if(primary_defined) {
+            if (primary_defined) {
                 boolean contain_primary = false;
                 for (Attribute attr : create_attr_list) {
-                    if(attr.name.equals(temp_primary)) {
+                    if (attr.name.equals(temp_primary)) {
                         contain_primary = true;
+                        attr.unique = true;                 // primary key must be unique
                         break;
                     }
                 }
-                if(!contain_primary)
+                if (!contain_primary)
                     throw new SQLException(EType.RuntimeError, 3,
                             "failed to create table, " + temp_primary + " is not a defined attribute!");
 
-                RecordManager.CreateTable(create_table);
-                CatalogManager.CreateTable(create_table, create_attr_list, temp_primary);
+
+                Table new_table = new Table(create_table, create_attr_list, temp_primary);
+                RecordManager.CreateTable(new_table.name);
+                CatalogManager.CreateTable(new_table);
                 String index_name = create_table + "_default_index";
                 Index index = new Index(index_name, create_table, temp_primary);
                 IndexManager.CreateIndex(index);
                 CatalogManager.CreateIndex(index);
             } else {
+                Table new_table = new Table(create_table, create_attr_list);
                 RecordManager.CreateTable(create_table);
-                CatalogManager.CreateTable(create_table, create_attr_list);
+                CatalogManager.CreateTable(new_table);
             }
         }
         Store();
         Clear();
     }
 
+    public static void QueryDropTable() throws SQLException {
+        if (CatalogManager.IsTableExist(drop_table)) {
+            Table tmp = CatalogManager.GetTable(drop_table);
+            for (Index drop_table_index : tmp.index_list) {
+                IndexManager.DropIndex(drop_table_index);
+            }
+            RecordManager.DropTable(drop_table);
+            CatalogManager.DropTable(drop_table);
+        } else {
+            throw new SQLException(EType.RuntimeError, 0, "xxx");
+        }
+        Store();
+        Clear();
+    }
 
     public static void QueryDelete() throws SQLException {
 
@@ -120,12 +135,6 @@ public class API {
     }
 
     public static void QueryDropIndex() throws SQLException {
-        Index index = CatalogManager.GetIndex(drop_index);
-        IndexManager.DropIndex(drop_index);
-        CatalogManager.DropIndex(drop_index);
-    }
-
-    public static void QueryDropTable() throws SQLException {
 
     }
 
@@ -225,8 +234,13 @@ public class API {
         temp_attr.type = type;
     }
 
-    public static void SetAttrLength(int length) {
-        temp_attr.length = length;
+    public static void SetAttrLength(int length) throws SQLException {
+        if (length >= 1 && length <= 255) {
+            temp_attr.length = length;
+        } else {
+            throw new SQLException(EType.RuntimeError, 5,
+                    "this table does not exist: " + on_table);
+        }
     }
 
     public static void SetAttrUnique() {
@@ -251,4 +265,8 @@ public class API {
         API.select_table = select_table;
     }
 
+    public static void SetCreateAttrList() {
+        create_attr_list.add(temp_attr);
+        temp_attr = new Attribute();
+    }
 }

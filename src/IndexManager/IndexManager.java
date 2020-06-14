@@ -3,6 +3,7 @@ package IndexManager;
 import CatalogManager.CatalogManager;
 import Data.*;
 import Utils.DefaultSetting;
+import Utils.SQLException;
 
 import java.io.*;
 import java.util.LinkedHashMap;
@@ -71,14 +72,59 @@ public class IndexManager {
     }
 
 
-    public static void CreateIndex(Index index) {
+    //* SQL operations
+    public static void CreateIndex(Index index) throws SQLException {
         int tuple_name = CatalogManager.GetRowNum(index.table_name);
         DataType type = CatalogManager.GetAttrType(index.table_name, index.attr_name);
 
+        switch (type) {
+            case INT:
+                BPTree<Integer, Address> int_tree = new BPTree<Integer, Address>(DefaultSetting.BP_ORDER);
+                IntTreeMap.put(index.name, int_tree);
+                break;
+            case FLOAT:
+                BPTree<Double, Address> float_tree = new BPTree<Double, Address>(DefaultSetting.BP_ORDER);
+                FloatTreeMap.put(index.name, float_tree);
+                break;
+            case CHAR:
+                BPTree<String, Address> char_tree = new BPTree<String, Address>(DefaultSetting.BP_ORDER);
+                CharTreeMap.put(index.name, char_tree);
+                break;
+        }
 
+//        int length = IndexManager.GetLength(index.table_name);
+//        int byte_offset = DefaultSetting.INT_SIZE;
+//        int block_offset = 0, count = 0;
+//        int attr_index = CatalogManager.GetAttrIndex(index.table_name, index.attr_name);
     }
 
-    public static void DropIndex(String index_name) {
 
+    public static void DropIndex(Index drop_index) {
+        String index_name = drop_index.name;
+        DataType type = CatalogManager.GetAttrType(drop_index.table_name, drop_index.attr_name);
+        switch (type) {
+            case INT:
+                IntTreeMap.remove(index_name);
+                break;
+            case FLOAT:
+                FloatTreeMap.remove(index_name);
+                break;
+            case CHAR:
+                CharTreeMap.remove(index_name);
+                break;
+        }
+    }
+
+
+    //* utilities methods
+
+    public static int GetLength(String table_name) {
+//        int row_length = CatalogManager.GetRowLength(table_name);
+//        if(row_length > DefaultSetting.INT_SIZE) {
+//
+//        } else {
+//
+//        }
+        return 0;
     }
 }

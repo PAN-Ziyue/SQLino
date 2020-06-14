@@ -1,8 +1,9 @@
 package Data;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Table {
+public class Table implements Serializable {
     public String name;
     public String primary_attr;
     public ArrayList<Attribute> attr_list;
@@ -14,8 +15,9 @@ public class Table {
     public int index_num;
     public int attr_num;
     public int row_num;
+    public int row_length;
 
-    public Table(String name, ArrayList<Attribute>attr_list) {
+    public Table(String name, ArrayList<Attribute> attr_list) {
         this.name = name;
         primary_attr = "";
         has_primary = false;
@@ -24,10 +26,14 @@ public class Table {
         this.index_num = 0;
         this.attr_num = attr_list.size();
         this.row_num = 0;
+        row_length = 0;
+        for (Attribute attr : attr_list) {
+            row_length += attr.GetLength();
+        }
     }
 
 
-    public Table(String name, ArrayList<Attribute>attr_list, String primary_attr) {
+    public Table(String name, ArrayList<Attribute> attr_list, String primary_attr) {
         this.name = name;
         this.primary_attr = primary_attr;
         this.attr_list = attr_list;
@@ -36,10 +42,16 @@ public class Table {
         this.attr_num = attr_list.size();
         this.row_num = 0;
         has_primary = true;
+        row_length = 0;
+        for (Attribute attr : attr_list) {
+            if(attr.name.equals(primary_attr))
+                attr.unique = true;
+            row_length += attr.GetLength();
+        }
     }
 
-    public Table(String name, String primary_attr, ArrayList<Attribute>attr_list,
-                 ArrayList<Index>index_list, int row_num) {
+    public Table(String name, String primary_attr, ArrayList<Attribute> attr_list,
+                 ArrayList<Index> index_list, int row_num) {
         this.name = name;
         this.primary_attr = primary_attr;
         this.attr_list = attr_list;
