@@ -3,6 +3,7 @@ package IndexManager;
 import BufferManager.BufferManager;
 import CatalogManager.CatalogManager;
 import Data.*;
+import RecordManager.RecordManager;
 import Utils.*;
 import BufferManager.Block;
 
@@ -68,17 +69,14 @@ public class IndexManager {
         output_file.close();
     }
 
-    public static void BuildIndex(Index index) {
-
-    }
-
 
     //* SQL operations
     public static void CreateIndex(Index index) throws SQLException {
         int block_offset = 0, row_count = 0, byte_offset = 0;
         int row_num = CatalogManager.GetRowNum(index.table_name);
-        int store_length = IndexManager.GetStoreLength(index.table_name);
+        int store_length = CatalogManager.GetStoreLength(index.table_name);
         DataType type = CatalogManager.GetAttrType(index.table_name, index.attr_name);
+        int tuple_index = CatalogManager.GetAttrIndex(index.table_name, index.attr_name);
 
         Block tmp_block = BufferManager.ReadBlock(index.table_name, block_offset);
 
@@ -86,32 +84,71 @@ public class IndexManager {
             case INT:
                 BPTree<Integer, Address> int_tree = new BPTree<Integer, Address>();
                 while (row_count < row_num) {
-                    if(byte_offset + store_length >= DefaultSetting.BLOCK_SIZE) {
+                    if (byte_offset + store_length >= DefaultSetting.BLOCK_SIZE) {
                         block_offset++;
                         byte_offset = 0;
                         tmp_block = BufferManager.ReadBlock(index.table_name, block_offset);
-                        if(tmp_block == null) {
+                        if (tmp_block == null) {
                             throw new SQLException(EType.RuntimeError, 0, "xxx");
                         }
                     }
-                    if(tmp_block.ReadInt(byte_offset) < 0) {
+                    if (tmp_block.ReadInt(byte_offset) < 0) {
                         Address value = new Address(index.table_name, block_offset, byte_offset);
-                        Tuple row_data = IndexManager.GetTuple();
+                        Tuple row_data = RecordManager.GetTuple(index.table_name, tmp_block, byte_offset);
+                        Integer key = Integer.parseInt(row_data.GetValue(tuple_index));
+                        int_tree.Insert(key, value);
+                        row_count++;
                     }
+                    byte_offset += store_length;
                 }
                 IntTreeMap.put(index.name, int_tree);
                 break;
             case FLOAT:
                 BPTree<Double, Address> float_tree = new BPTree<Double, Address>();
+                while (row_count < row_num) {
+                    if (byte_offset + store_length >= DefaultSetting.BLOCK_SIZE) {
+                        block_offset++;
+                        byte_offset = 0;
+                        tmp_block = BufferManager.ReadBlock(index.table_name, block_offset);
+                        if (tmp_block == null) {
+                            throw new SQLException(EType.RuntimeError, 0, "xxx");
+                        }
+                    }
+                    if (tmp_block.ReadInt(byte_offset) < 0) {
+                        Address value = new Address(index.table_name, block_offset, byte_offset);
+                        Tuple row_data = RecordManager.GetTuple(index.table_name, tmp_block, byte_offset);
+                        Double key = Double.parseDouble(row_data.GetValue(tuple_index));
+                        float_tree.Insert(key, value);
+                        row_count++;
+                    }
+                    byte_offset += store_length;
+                }
                 FloatTreeMap.put(index.name, float_tree);
                 break;
             case CHAR:
                 BPTree<String, Address> char_tree = new BPTree<String, Address>();
+                while (row_count < row_num) {
+                    if (byte_offset + store_length >= DefaultSetting.BLOCK_SIZE) {
+                        block_offset++;
+                        byte_offset = 0;
+                        tmp_block = BufferManager.ReadBlock(index.table_name, block_offset);
+                        if (tmp_block == null) {
+                            throw new RuntimeException();
+                        }
+                    }
+                    if (tmp_block.ReadInt(byte_offset) < 0) {
+                        Address value = new Address(index.table_name, block_offset, byte_offset);
+                        Tuple row_data = RecordManager.GetTuple(index.table_name, tmp_block, byte_offset);
+                        String key = row_data.GetValue(tuple_index);
+                        char_tree.Insert(key, value);
+                        row_count++;
+                    }
+                    byte_offset += store_length;
+                }
                 CharTreeMap.put(index.name, char_tree);
                 break;
         }
     }
-
 
     public static void DropIndex(Index drop_index) {
         String index_name = drop_index.name;
@@ -129,24 +166,25 @@ public class IndexManager {
         }
     }
 
+    public static void Insert(Index index, String key, Address insert_addr) {
+        DataType type = CatalogManager.GetAttrType(index.table_name, index.attr_name);
+        switch (type) {
+            case INT:
+                BPTree<Integer, Address> int_tree = IntTreeMap.get(index.name);
+                int_tree.Insert(Integer.parseInt(key), insert_addr);
+                break;
+            case FLOAT:
+                BPTree<Double, Address> float_tree = FloatTreeMap.get(index.name);
+                float_tree.Insert(Double.parseDouble(key), insert_addr);
+                break;
+            case CHAR:
+                BPTree<String, Address> char_tree = CharTreeMap.get(index.name);
+                char_tree.Insert(key, insert_addr);
+                break;
+        }
+    }
 
     //* utilities methods
 
-    public static int GetStoreLength(String table_name) {
-//        int row_length = CatalogManager.GetRowLength(table_name);
-//        if(row_length > )
 
-
-//        int row_length = CatalogManager.GetRowLength(table_name);
-//        if(row_length > DefaultSetting.INT_SIZE) {
-//
-//        } else {
-//
-//        }
-        return 0;
-    }
-
-    public static Tuple GetTuple(String table_name, Block block, int offset) {
-
-    }
 }

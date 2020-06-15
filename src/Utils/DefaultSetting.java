@@ -5,7 +5,6 @@ public class DefaultSetting {
     public static final int BLOCK_SIZE = 4096;
     public static final int BLOCK_NUM = 50;
 
-    
 
     public static final String DB_PATH = "DB";
     public static final String TABLE_CATALOG_PATH = DB_PATH + "/table.catalog";

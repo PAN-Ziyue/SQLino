@@ -1,5 +1,7 @@
 package Utils;
 
+import Data.DataType;
+
 import java.util.HashSet;
 import java.util.regex.Pattern;
 
@@ -69,6 +71,15 @@ public class CommonUtils {
         }
     }
 
+    public static DataType InferData(String value) {
+        if (IsInteger(value))
+            return DataType.INT;
+        else if(IsFloat(value))
+            return DataType.FLOAT;
+        else
+            return DataType.CHAR;
+    }
+
     public static String ParseString(String token) {
         String[] char_lists = token.split("\\\\");
         StringBuilder rst = new StringBuilder();
@@ -80,5 +91,6 @@ public class CommonUtils {
         }
         return rst.toString();
     }
+
 }
 

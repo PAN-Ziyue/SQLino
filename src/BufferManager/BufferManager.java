@@ -1,10 +1,10 @@
 package BufferManager;
 
-import Utils.DefaultSetting;
-import Utils.EType;
-import Utils.SQLException;
+import Data.Tuple;
+import Utils.*;
 
-import java.io.*;
+import java.io.File;
+import java.io.RandomAccessFile;
 import java.util.Arrays;
 
 public class BufferManager {
@@ -19,132 +19,89 @@ public class BufferManager {
     public static void Store() throws SQLException {
         for (int i = 0; i < DefaultSetting.BLOCK_NUM; i++)
             if (buffer[i].is_valid)
-                WriteBlock(i);
+                WriteBlockToDisk(i);
     }
 
-    public static void SetInvalid(String file_name) {
+    public static void Drop(String table_name) {
+        String file_path = DefaultSetting.TABLE_DIR + "/" + table_name + ".table";
+        try {
+            File file = new File(file_path);
+            file.delete();
+        } catch (Exception e) {
+        }
+    }
+
+    public static void SetInvalid(String table_name) {
         for (int i = 0; i < DefaultSetting.BLOCK_NUM; i++)
-            if (!buffer[i].file_name.equals("") && buffer[i].file_name.equals(file_name))
+            if (buffer[i].table_name.equals(table_name))
                 buffer[i].is_valid = false;
     }
 
-    public static int ReadBlockID(String file_name, int offset) throws SQLException {
-        for (int i = 0; i < DefaultSetting.BLOCK_NUM; i++)
-            if (buffer[i].is_valid && buffer[i].file_name.equals(file_name)
-                    && buffer[i].block_offset == offset)
-                return i;
-
-
-        String file_path = DefaultSetting.TABLE_DIR + "/" + file_name + ".table";
+    public static Block ReadBlock(String table_name, int block_offset) {
+        for (int i = 0; i < DefaultSetting.BLOCK_NUM; i++) { // find block in buffer
+            if (buffer[i].is_valid && buffer[i].table_name.equals(table_name)
+                    && buffer[i].block_offset == block_offset)
+                return buffer[i];
+        }
+        String file_path = DefaultSetting.TABLE_DIR + "/" + table_name + ".table";
         File file = new File(file_path);
-        int bid = GetFreeBlockID();
-        if (bid == -1)
-            return bid;
-        try {
-            if (!file.exists())
-                file.createNewFile();
-            if (!ReadBlockSucceed(file_name, offset, bid))
-                return -1;
-        } catch (Exception e) {
-            return -1;
-        }
-        return bid;
+        int free_block_id = GetFreeBlockID();
+        if (free_block_id == -1 || !file.exists()) return null;
+        if (!ReadBlockFromDisk(table_name, block_offset, free_block_id)) return null;
+        return buffer[free_block_id];
     }
 
-    public static Block ReadBlock(String file_name, int offset) throws SQLException {
-        int i;
-        for (i = 0; i < DefaultSetting.BLOCK_NUM; i++)
-            if (buffer[i].is_valid && buffer[i].file_name.equals(file_name)
-                    && buffer[i].block_offset == offset)
-                break;
-
-        if (i < DefaultSetting.BLOCK_NUM)
-            return buffer[i];
-        else {
-            String file_path = DefaultSetting.TABLE_DIR + "/" + file_name + ".table";
-            File file = new File(file_path);
-            int bid = GetFreeBlockID();
-            if (bid == -1 || !file.exists())
-                return null;
-            if (!ReadBlockSucceed(file_name, offset, bid))
-                return null;
-            return buffer[bid];
-        }
-    }
-
-    public static boolean ReadBlockSucceed(String file_name, int offset, int block_id) throws SQLException {
-        boolean flag = false;
-        byte[] data = new byte[DefaultSetting.BLOCK_NUM];
+    public static boolean ReadBlockFromDisk(String table_name, int block_offset, int block_id) {
+        byte[] tmp_data = new byte[DefaultSetting.BLOCK_SIZE];
+        String file_path = DefaultSetting.TABLE_DIR + "/" + table_name + ".table";
         RandomAccessFile raf = null;
         try {
-            String file_path = DefaultSetting.TABLE_DIR + "/" + file_name + ".table";
             File in = new File(file_path);
             raf = new RandomAccessFile(in, "rw");
-            if((offset + 1) * DefaultSetting.BLOCK_SIZE <= raf.length()) {
-                raf.seek(offset * DefaultSetting.BLOCK_SIZE);
-                raf.read(data, 0, DefaultSetting.BLOCK_SIZE);
+            if ((block_offset + 1) * DefaultSetting.BLOCK_SIZE <= raf.length()) {
+                raf.seek(block_offset * DefaultSetting.BLOCK_SIZE);
+                raf.read(tmp_data, 0, DefaultSetting.BLOCK_SIZE);
             } else {
-                Arrays.fill(data, (byte)0);
+                Arrays.fill(tmp_data, (byte) 0);
             }
-            flag = true;
-        } catch (Exception e) {
-            throw new SQLException(EType.RuntimeError, 3,
-                    "failed to create table");
-        } finally {
-            try {
-                if (raf != null) raf.close();
-            } catch (Exception e) {
-                throw new SQLException(EType.RuntimeError, 3,
-                        "failed to create table");
-            }
-        }
-        if(flag) {
+            raf.close();
             buffer[block_id].Reset();
-            buffer[block_id].SetBlockData(data);
-            buffer[block_id].file_name = file_name;
-            buffer[block_id].block_offset = offset;
+            buffer[block_id].SetBlockData(tmp_data);
             buffer[block_id].is_valid = true;
+            buffer[block_id].table_name = table_name;
+            buffer[block_id].block_offset = block_offset;
+            return true;
+        } catch (Exception e) {
+            return false;
         }
-        return flag;
     }
 
+    public static void WriteBlockToDisk(int block_id) throws SQLException {
+        if (!buffer[block_id].is_dirty) {
+            buffer[block_id].is_valid = false;
+            return;
+        }
+        String file_path = DefaultSetting.TABLE_DIR + "/" + buffer[block_id].table_name + ".table";
+        RandomAccessFile raf = null;
+        try {
+            File out = new File(file_path);
+            raf = new RandomAccessFile(out, "rw");
+            if (!out.exists()) out.createNewFile();
+            raf.seek(buffer[block_id].block_offset * DefaultSetting.BLOCK_SIZE);
+            raf.write(buffer[block_id].GetBlockData());
+        } catch (Exception e) {
+            throw new SQLException(EType.RuntimeError, 0, "fail to save");
+        }
+    }
 
-    public static void WriteBlock(int block_id) throws SQLException {
-        if (buffer[block_id].is_dirty) {
-            RandomAccessFile raf = null;
-            try {
-                String file_path = DefaultSetting.TABLE_DIR + "/" + buffer[block_id].file_name + ".table";
-                File out = new File(file_path);
-                raf = new RandomAccessFile(out, "rw");
-                if (!out.exists())
-                    out.createNewFile();
-                raf.seek(buffer[block_id].block_offset * DefaultSetting.BLOCK_SIZE);
-                raf.write(buffer[block_id].GetBlockData());
-            } catch (Exception e) {
-                throw new SQLException(EType.RuntimeError, 3,
-                        "failed to create table");
-            } finally {
-                try {
-                    if (raf != null) raf.close();
-                } catch (Exception e) {
-                    throw new SQLException(EType.RuntimeError, 3,
-                            "failed to create table");
-                }
+    public static int GetFreeBlockID() {
+        int free_block_id = -1, min = Integer.MAX_VALUE;
+        for (int i = 0; i < DefaultSetting.BLOCK_NUM; i++)
+            if (!buffer[i].is_pinned && buffer[i].LRU_count < min) {
+                free_block_id = i;
+                min = buffer[i].LRU_count;
             }
-        }
-        buffer[block_id].is_valid = false;
+        return free_block_id;
     }
 
-    public static int GetFreeBlockID() throws SQLException {
-        int index = -1, min = Integer.MAX_VALUE;
-        for (int i = 0; i < DefaultSetting.BLOCK_NUM; i++) {
-            if (!buffer[i].is_pinned && buffer[i].GetLRU() < min) {
-                index = i;
-                min = buffer[i].GetLRU();
-            }
-        }
-        if (index != -1 && buffer[index].is_dirty)
-            WriteBlock(index);
-        return index;
-    }
 }

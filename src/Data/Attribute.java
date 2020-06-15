@@ -9,12 +9,12 @@ public class Attribute implements Serializable {
     public DataType type;
     public boolean unique;
     public boolean primary;
-    public int length;
+    public int char_length;
 
     public int GetLength() {
         switch (type) {
             case CHAR:
-                return length * DefaultSetting.CHAR_SIZE;
+                return char_length * DefaultSetting.CHAR_SIZE;
             case INT:
                 return DefaultSetting.INT_SIZE;
             case FLOAT:
@@ -24,7 +24,6 @@ public class Attribute implements Serializable {
         }
     }
 
-
     public Attribute() {
         Clear();
     }
@@ -33,6 +32,6 @@ public class Attribute implements Serializable {
         name = "";
         type = DataType.INT;
         unique = primary = false;
-        length = 1;
+        char_length = 1;
     }
 }

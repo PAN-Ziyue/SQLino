@@ -5,32 +5,25 @@ import Utils.DefaultSetting;
 import java.util.Arrays;
 
 public class Block {
-    private int LRU_count;
+    public int LRU_count;
     public int block_offset;
     public boolean is_dirty;
     public boolean is_valid;
     public boolean is_pinned;
-    public String file_name;
+    public String table_name;
     private byte[] block_data = new byte[DefaultSetting.BLOCK_SIZE];
 
     public Block() {
-        file_name = "";
-        LRU_count = 0;
-        block_offset = 0;
-        is_dirty = is_pinned = false;
-        is_valid = false;
+        table_name = "";
+        LRU_count = block_offset = 0;
+        is_dirty = is_pinned = is_valid = false;
         Arrays.fill(block_data, (byte) 0);
     }
 
-
     //* common utilities
     public void Reset() {
-        is_dirty = is_pinned = is_valid =false;
+        is_dirty = is_pinned = is_valid = false;
         LRU_count = block_offset = 0;
-    }
-
-    public int GetLRU() {
-        return LRU_count;
     }
 
     public byte[] GetBlockData() {
@@ -44,6 +37,7 @@ public class Block {
     public void SetBlockData() {
         Arrays.fill(block_data, (byte) 0);
     }
+
 
     //* read & write supported data type
     public int ReadInt(int offset) {
@@ -70,6 +64,14 @@ public class Block {
             char_bytes[i] = block_data[offset + i];
         LRU_count++;
         return new String(char_bytes);
+    }
+
+    public void WriteData(byte[] data, int offset) {
+        if (offset + data.length <= DefaultSetting.BLOCK_SIZE) {
+            System.arraycopy(data, 0, block_data, offset, data.length);
+            is_dirty = true;
+            LRU_count++;
+        }
     }
 
     public void WriteInt(int value, int offset) {

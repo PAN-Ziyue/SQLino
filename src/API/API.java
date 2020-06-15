@@ -20,7 +20,6 @@ public class API {
     private static String create_index = "";
     private static String create_table = "";
     private static String on_table = "";
-    private static String insert_value = "";
     private static String insert_table = "";
     private static String on_attribute = "";
     private static String select_table = "";
@@ -73,44 +72,46 @@ public class API {
         if (CatalogManager.IsTableExist(create_table)) {
             throw new SQLException(EType.RuntimeError, 3,
                     "failed to create table, " + create_table + " has already existed!");
-        } else {
-            HashSet<String> check_duplicate_attr = new HashSet<>();
-            for (Attribute attr : create_attr_list) {
-                if (check_duplicate_attr.contains(attr.name)) {
-                    throw new SQLException(EType.RuntimeError, 3,
-                            "failed to create table, " + attr.name + " has duplicate attributes!");
-                } else {
-                    check_duplicate_attr.add(attr.name);
-                }
-            }
+        }
+        if (create_attr_list.size() > 32)
+            throw new SQLException(EType.RuntimeError, 0, "too many attributes");
 
-            if (primary_defined) {
-                boolean contain_primary = false;
-                for(int i=0; i<create_attr_list.size(); i++) {
-                    if(create_attr_list.get(i).name.equals(temp_primary)) {
-                        contain_primary = true;
-                        create_attr_list.get(i).unique = true;// primary key must be unique
-                        break;
-                    }
-                }
-                if (!contain_primary)
-                    throw new SQLException(EType.RuntimeError, 3,
-                            "failed to create table, " + temp_primary + " is not a defined attribute!");
-
-
-                Table new_table = new Table(create_table, create_attr_list, temp_primary);
-                RecordManager.CreateTable(new_table.name);
-                CatalogManager.CreateTable(new_table);
-                String index_name = create_table + "_default_index";
-                Index index = new Index(index_name, create_table, temp_primary);
-                IndexManager.CreateIndex(index);
-                CatalogManager.CreateIndex(index);
+        HashSet<String> check_duplicate_attr = new HashSet<>();
+        for (Attribute attr : create_attr_list) {
+            if (check_duplicate_attr.contains(attr.name)) {
+                throw new SQLException(EType.RuntimeError, 3,
+                        "failed to create table, " + attr.name + " has duplicate attributes!");
             } else {
-                Table new_table = new Table(create_table, create_attr_list);
-                RecordManager.CreateTable(create_table);
-                CatalogManager.CreateTable(new_table);
+                check_duplicate_attr.add(attr.name);
             }
         }
+
+        if (primary_defined) {
+            boolean contain_primary = false;
+            for (int i = 0; i < create_attr_list.size(); i++) {
+                if (create_attr_list.get(i).name.equals(temp_primary)) {
+                    contain_primary = true;
+                    create_attr_list.get(i).unique = true;// primary key must be unique
+                    break;
+                }
+            }
+            if (!contain_primary)
+                throw new SQLException(EType.RuntimeError, 3,
+                        "failed to create table, " + temp_primary + " is not a defined attribute!");
+
+            Table new_table = new Table(create_table, create_attr_list, temp_primary);
+            RecordManager.CreateTable(new_table.name);
+            CatalogManager.CreateTable(new_table);
+            String index_name = create_table + "_default_index";
+            Index index = new Index(index_name, create_table, temp_primary);
+            IndexManager.CreateIndex(index);
+            CatalogManager.CreateIndex(index);
+        } else {
+            Table new_table = new Table(create_table, create_attr_list);
+            RecordManager.CreateTable(create_table);
+            CatalogManager.CreateTable(new_table);
+        }
+
         Store();
         Clear();
     }
@@ -123,6 +124,7 @@ public class API {
             }
             RecordManager.DropTable(drop_table);
             CatalogManager.DropTable(drop_table);
+            BufferManager.Drop(drop_table);
         } else {
             throw new SQLException(EType.RuntimeError, 0, "xxx");
         }
@@ -130,19 +132,55 @@ public class API {
         Clear();
     }
 
-    public static void QueryDelete() throws SQLException {
-
-        Clear();
-    }
-
-    public static void QueryDropIndex() throws SQLException {
-
-    }
-
     public static void QueryInsert() throws SQLException {
+        if (!CatalogManager.IsTableExist(insert_table))
+            throw new SQLException(EType.RuntimeError, 0, "xxx");
 
+        Table tmp = CatalogManager.GetTable(insert_table);
+        if (insert_value_list.size() != tmp.attr_list.size())
+            throw new SQLException(EType.RuntimeError, 0, "attribute number does not match");
+        for (int i = 0; i < tmp.attr_list.size(); i++) {
+            if (tmp.attr_list.get(i).type != insert_value_list.get(i).type)
+                throw new SQLException(EType.RuntimeError, 0, "attribute type does not match");
+            if (tmp.attr_list.get(i).type == DataType.CHAR &&
+                    insert_value_list.get(i).val.length() > tmp.attr_list.get(i).char_length)
+                throw new SQLException(EType.RuntimeError, 0, "exceed the char length");
+            // check unique
+            if (tmp.attr_list.get(i).unique) {
+                WhereCond check_unique_cond = new WhereCond();
+                check_unique_cond.expr1 = tmp.attr_list.get(i).name;
+                check_unique_cond.is_expr1_attr = true;
+                check_unique_cond.cmp = CMP.EQUAL;
+                check_unique_cond.expr2 = insert_value_list.get(i).val;
+                check_unique_cond.is_expr2_attr = false;
+                check_unique_cond.type2 = insert_value_list.get(i).type;
+                where_condition.add(check_unique_cond);
+                if (RecordManager.Select(insert_table, where_condition).size() != 0)
+                    throw new SQLException(EType.RuntimeError, 0, "duplicate unique attribute");
+            }
+        }
+
+        Address insert_addr = RecordManager.Insert(insert_table, insert_value_list);
+        CatalogManager.Insert(insert_table);
+        for (Index index : tmp.index_list) {
+            int attr_index = CatalogManager.GetAttrIndex(index.table_name, index.attr_name);
+            IndexManager.Insert(index, insert_value_list.get(attr_index).val, insert_addr);
+        }
+        Store();
         Clear();
     }
+
+    public static void QuerySelect() throws SQLException {
+        //TODO check where condition match with the attributes.
+        Clear();
+    }
+
+
+    public static void QueryDelete() throws SQLException {
+        //TODO check where condition match with the attributes.
+        Clear();
+    }
+
 
     public static void QueryCreateIndex() throws SQLException {
         if (CatalogManager.IsIndexExist(create_index)) {
@@ -171,23 +209,56 @@ public class API {
         Clear();
     }
 
+    public static void QueryDropIndex() throws SQLException {
 
-    public static void QuerySelect() throws SQLException {
-
-        Clear();
     }
+
 
     //* data transfer function
     public static void SetWhereExpr1(String expr1) {
-        temp_where_cond.expr1 = expr1;
+        if (CommonUtils.IsString(expr1)) {
+            temp_where_cond.type1 = DataType.CHAR;
+            temp_where_cond.is_expr1_attr = false;
+            temp_where_cond.expr1 = CommonUtils.ParseString(expr1);
+        } else if (CommonUtils.IsInteger(expr1)) {
+            temp_where_cond.type1 = DataType.INT;
+            temp_where_cond.is_expr1_attr = false;
+            temp_where_cond.expr1 = expr1;
+        } else if (CommonUtils.IsFloat(expr1)) {
+            temp_where_cond.type1 = DataType.FLOAT;
+            temp_where_cond.is_expr1_attr = false;
+            temp_where_cond.expr1 = expr1;
+        } else {
+            temp_where_cond.is_expr1_attr = true;
+            temp_where_cond.expr1 = expr1;
+        }
     }
 
     public static void SetWhereCmp(CMP cmp) {
         temp_where_cond.cmp = cmp;
     }
 
-    public static void SetWhereExpr2(String expr2) {
+    public static void SetWhereExpr2(String expr2) throws SQLException {
+        if (CommonUtils.IsString(expr2)) {
+            temp_where_cond.type2 = DataType.CHAR;
+            temp_where_cond.is_expr2_attr = false;
+            temp_where_cond.expr2 = CommonUtils.ParseString(expr2);
+        } else if (CommonUtils.IsInteger(expr2)) {
+            temp_where_cond.type2 = DataType.INT;
+            temp_where_cond.is_expr2_attr = false;
+            temp_where_cond.expr2 = expr2;
+        } else if (CommonUtils.IsFloat(expr2)) {
+            temp_where_cond.type2 = DataType.FLOAT;
+            temp_where_cond.is_expr2_attr = false;
+            temp_where_cond.expr2 = expr2;
+        } else {
+            temp_where_cond.is_expr2_attr = true;
+            temp_where_cond.expr2 = expr2;
+        }
         temp_where_cond.expr2 = expr2;
+        if (!temp_where_cond.is_expr1_attr && !temp_where_cond.is_expr2_attr)
+            throw new SQLException(EType.RuntimeError, 365,
+                    "selection condition cannot both be constants");
         where_condition.add(temp_where_cond);
     }
 
@@ -237,7 +308,7 @@ public class API {
 
     public static void SetAttrLength(int length) throws SQLException {
         if (length >= 1 && length <= 255) {
-            temp_attr.length = length;
+            temp_attr.char_length = length;
         } else {
             throw new SQLException(EType.RuntimeError, 5,
                     "this table does not exist: " + on_table);

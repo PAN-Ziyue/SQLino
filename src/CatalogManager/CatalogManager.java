@@ -83,6 +83,10 @@ public class CatalogManager {
         table_list.remove(table_name);
     }
 
+    public static void Insert(String table_name) {
+        table_list.get(table_name).row_num++;
+    }
+
 
     public static void ShowCatalog() {
 
@@ -110,6 +114,15 @@ public class CatalogManager {
         }
     }
 
+    public static Index GetIndex(String table_name, String attr_name) throws SQLException {
+        Table tmp = GetTable(table_name);
+        for (Index index : tmp.index_list) {
+            if (index.attr_name.equals(attr_name))
+                return index;
+        }
+        throw new SQLException(EType.RuntimeError, 0, "cannot find index");
+    }
+
     public static String GetPrimaryKey(String table_name) {
         return GetTable(table_name).primary_attr;
     }
@@ -129,6 +142,10 @@ public class CatalogManager {
                 return attr.type;
         }
         return DataType.INT;
+    }
+
+    public static DataType GetAttrType(String table_name, int i) {
+        return GetTable(table_name).attr_list.get(i).type;
     }
 
     public static boolean IsIndexExist(String index_name) {
@@ -219,4 +236,28 @@ public class CatalogManager {
     public static int GetRowLength(String table_name) {
         return GetTable(table_name).row_length;
     }
+
+    public static int GetStoreLength(String table_name) {
+        int row_length = GetRowLength(table_name);
+
+        if (row_length > DefaultSetting.INT_SIZE) {
+            return row_length + DefaultSetting.CHAR_SIZE;
+        } else {
+            return DefaultSetting.INT_SIZE + DefaultSetting.CHAR_SIZE;
+        }
+    }
+
+    public static int GetAttrLength(String table_name, String attr_name) {
+        Table tmp = GetTable(table_name);
+        for (Attribute attr : tmp.attr_list) {
+            if (attr.name.equals(attr_name))
+                return attr.GetLength();
+        }
+        return -1;
+    }
+
+    public static int GetAttrLength(String table_name, int i) {
+        return GetTable(table_name).attr_list.get(i).GetLength();
+    }
+
 }

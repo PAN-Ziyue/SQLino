@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 public class Tuple {
 
-    private ArrayList<String> value_list;
+    public ArrayList<String> value_list;
 
     public Tuple() {
         value_list = new ArrayList<>();

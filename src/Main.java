@@ -1,9 +1,6 @@
 
 import API.API;
-import CatalogManager.CatalogManager;
-import Interpreter.Interpreter;
-import Interpreter.State;
-
+import Interpreter.*;
 
 import java.io.*;
 
