@@ -171,13 +171,37 @@ public class API {
     }
 
     public static void QuerySelect() throws SQLException {
+        if (!CatalogManager.IsTableExist(select_table))
+            throw new SQLException(EType.RuntimeError, 0, "table does not exist");
+
+        for (String attr_name : select_attr_list) {
+            if (!CatalogManager.IsAttrExist(select_table, attr_name))
+                throw new SQLException(EType.RuntimeError, 0, "attribute does not exist");
+        }
+
+        for (WhereCond cond : where_condition) {
+            if (cond.is_expr1_attr && !CatalogManager.IsAttrExist(select_table, cond.expr1)) {
+                throw new SQLException(EType.RuntimeError, 0, "attribute does not exist");
+            }
+            if (cond.is_expr2_attr && !CatalogManager.IsAttrExist(select_table, cond.expr2)) {
+                throw new SQLException(EType.RuntimeError, 0, "attribute does not exist");
+            }
+            if (!cond.is_expr1_attr && !cond.is_expr2_attr)
+                throw new SQLException(EType.RuntimeError, 365, "conditions cannot be both constants");
+        }
+
+        
+
+
         //TODO check where condition match with the attributes.
+        Store();
         Clear();
     }
 
 
     public static void QueryDelete() throws SQLException {
         //TODO check where condition match with the attributes.
+        Store();
         Clear();
     }
 
@@ -238,7 +262,7 @@ public class API {
         temp_where_cond.cmp = cmp;
     }
 
-    public static void SetWhereExpr2(String expr2) throws SQLException {
+    public static void SetWhereExpr2(String expr2) {
         if (CommonUtils.IsString(expr2)) {
             temp_where_cond.type2 = DataType.CHAR;
             temp_where_cond.is_expr2_attr = false;
@@ -255,10 +279,6 @@ public class API {
             temp_where_cond.is_expr2_attr = true;
             temp_where_cond.expr2 = expr2;
         }
-        temp_where_cond.expr2 = expr2;
-        if (!temp_where_cond.is_expr1_attr && !temp_where_cond.is_expr2_attr)
-            throw new SQLException(EType.RuntimeError, 365,
-                    "selection condition cannot both be constants");
         where_condition.add(temp_where_cond);
     }
 
