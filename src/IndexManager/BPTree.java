@@ -1,5 +1,6 @@
 package IndexManager;
 
+import Data.CMP;
 import Utils.DefaultSetting;
 
 import java.io.Serializable;
@@ -12,18 +13,100 @@ public class BPTree<K extends Comparable<K>, V> implements Serializable {
     public Node<K, V> root;
     public static final int D = DefaultSetting.BP_ORDER;
 
-    public V Search_EQUAL(K key) {
-        if (key == null || root == null) {
-            return null;
+    public ArrayList<V> Search(K key, CMP cmp) {
+        switch (cmp) {
+            case EQUAL:
+                return Search_EQUAL(key);
+            case NOT_EQUAL:
+                return Search_NOT_EQUAL(key);
+            case GREATER:
+                return Search_GREATER(key);
+            case LESS:
+                return Search_LESS(key);
+            case GREATER_EQUAL:
+                return Search_GREATER_EQUAL(key);
+            case LESS_EQUAL:
+                return Search_LESS_EQUAL(key);
         }
+        return null;
+    }
+
+    private ArrayList<V> Search_EQUAL(K key) {
+        ArrayList<V> res = new ArrayList<>();
+        if (key == null || root == null) return res;
+
         LeafNode<K, V> leaf = (LeafNode<K, V>) Search(root, key);
         if (leaf != null) {
             for (int i = 0; i < leaf.key_list.size(); i++) {
-                if (key.compareTo(leaf.key_list.get(i)) == 0)
-                    return leaf.value_list.get(i);
+                if (key.compareTo(leaf.key_list.get(i)) == 0) {
+                    V tmp_value = leaf.value_list.get(i);
+                    res.add(tmp_value);
+                    break;
+                }
             }
         }
-        return null;
+        return res;
+    }
+
+    private ArrayList<V> Search_NOT_EQUAL(K key) {
+        ArrayList<V> less = Search_LESS(key);
+        ArrayList<V> greater = Search_GREATER(key);
+        less.addAll(greater);
+        return less;
+    }
+
+    private ArrayList<V> Search_GREATER(K key) {
+        ArrayList<V> res = new ArrayList<>();
+        if (key == null || root == null) return res;
+        LeafNode<K, V> leaf = (LeafNode<K, V>) Search(root, key);
+        if (leaf != null) {
+            while (leaf != null) {
+                for (int i = 0; i < leaf.key_list.size(); i++) {
+                    if (key.compareTo(leaf.key_list.get(i)) < 0) {
+                        V tmp_value = leaf.value_list.get(i);
+                        res.add(tmp_value);
+                    }
+                }
+                leaf = leaf.next_leaf;
+            }
+        }
+        return res;
+    }
+
+    private ArrayList<V> Search_LESS(K key) {
+        ArrayList<V> res = new ArrayList<>();
+        if (key == null || root == null) return res;
+        LeafNode<K, V> leaf = (LeafNode<K, V>) Search(root, key);
+        if (leaf != null) {
+            while (leaf != null) {
+                for (int i = 0; i < leaf.key_list.size(); i++) {
+                    if (key.compareTo(leaf.key_list.get(i)) > 0) {
+                        V tmp_value = leaf.value_list.get(i);
+                        res.add(tmp_value);
+                    }
+                }
+                leaf = leaf.previous_leaf;
+            }
+        }
+        return res;
+    }
+
+    private ArrayList<V> Search_GREATER_EQUAL(K key) {
+        ArrayList<V> res = Search_EQUAL(key);
+        if (res.size() == 0)
+            return Search_GREATER(key);
+        ArrayList<V> greater = Search_GREATER(key);
+        greater.add(0, res.get(0));
+        return greater;
+    }
+
+    private ArrayList<V> Search_LESS_EQUAL(K key) {
+        ArrayList<V> res = Search_EQUAL(key);
+        if (res.size() == 0)
+            return Search_LESS(key);
+        ArrayList<V> less = Search_LESS(key);
+        less.add(res.get(0));
+        return less;
     }
 
     private Node<K, V> Search(Node<K, V> node, K key) {
@@ -44,7 +127,6 @@ public class BPTree<K extends Comparable<K>, V> implements Serializable {
         }
         return null;
     }
-
 
     public void Insert(K key, V value) {
         LeafNode<K, V> newLeaf = new LeafNode<>(key, value);

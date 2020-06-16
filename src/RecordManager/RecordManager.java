@@ -4,15 +4,12 @@ import BufferManager.*;
 import CatalogManager.CatalogManager;
 import Data.*;
 import Utils.*;
-import com.sun.org.apache.bcel.internal.generic.GETSTATIC;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-
+import java.util.*;
 
 public class RecordManager {
-
+    //* SQL operation
     public static void CreateTable(String table_name) throws SQLException {
         String file_path = DefaultSetting.TABLE_DIR + "/" + table_name + ".table";
         File table_file = new File(file_path);
@@ -97,12 +94,49 @@ public class RecordManager {
         return rst;
     }
 
+    public static ArrayList<Tuple> Select(
+            String table_name, ArrayList<Address> address_list, ArrayList<WhereCond> condition)
+            throws SQLException {
+        ArrayList<Tuple> res = new ArrayList<>();
+        if (address_list.size() == 0) return res;
+        Collections.sort(address_list);
+        int block_offset = 0, previous_offset = -1;
+        int byte_offset = 0;
+        Block block = null;
+        for (int i = 0; i < address_list.size(); i++) {
+            block_offset = address_list.get(i).block_offset;
+            byte_offset = address_list.get(i).byte_offset;
+            if (i == 0 || block_offset != previous_offset) {
+                block = BufferManager.ReadBlock(table_name, block_offset);
+                if (block == null && i == 0) {
+                    throw new SQLException(EType.RuntimeError, 0, "xxx");
+                }
+                if (block.ReadInt(byte_offset) < 0) {
+                    boolean check = true;
+                    Tuple tuple = GetTuple(table_name, block, byte_offset);
+                    for (WhereCond cond : condition) {
+                        if (!CheckCondition(table_name, cond, tuple)) {
+                            check = false;
+                            break;
+                        }
+                    }
+                    if (check) {
+                        res.add(tuple);
+                    }
+                }
+                previous_offset = block_offset;
+            }
+        }
+        return res;
+    }
 
+
+    //* RecordManager Utilities
     public static boolean CheckCondition(String table_name, WhereCond cond, Tuple data)
             throws SQLException {
         String value1, value2;
         DataType type1, type2;
-        if(cond.is_expr1_attr) {
+        if (cond.is_expr1_attr) {
             int i = CatalogManager.GetAttrIndex(table_name, cond.expr1);
             value1 = data.value_list.get(i);
             type1 = CatalogManager.GetAttrType(table_name, i);
@@ -111,7 +145,7 @@ public class RecordManager {
             type1 = cond.type1;
         }
 
-        if(cond.is_expr2_attr) {
+        if (cond.is_expr2_attr) {
             int i = CatalogManager.GetAttrIndex(table_name, cond.expr2);
             value2 = data.value_list.get(i);
             type2 = CatalogManager.GetAttrType(table_name, i);

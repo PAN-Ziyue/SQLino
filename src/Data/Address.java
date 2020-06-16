@@ -3,9 +3,9 @@ package Data;
 import java.io.Serializable;
 
 public class Address implements Comparable<Address>, Serializable {
-    private String file_name;
-    private int block_offset;
-    private int byte_offset;
+    public String file_name;
+    public int block_offset;
+    public int byte_offset;
 
     public Address(String file_name, int block_offset, int byte_offset) {
         this.file_name = file_name;

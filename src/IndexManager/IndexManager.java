@@ -8,6 +8,7 @@ import Utils.*;
 import BufferManager.Block;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
 public class IndexManager {
@@ -183,6 +184,28 @@ public class IndexManager {
                 break;
         }
     }
+
+    public static ArrayList<Address> Select(Index index, WhereCond condition) {
+        ArrayList<Address> res = new ArrayList<>();
+        if (index == null) return res;
+        DataType type = CatalogManager.GetAttrType(index.table_name, index.attr_name);
+        switch (type) {
+            case INT:
+                BPTree<Integer, Address> int_tree = IntTreeMap.get(index.name);
+                res = int_tree.Search(Integer.parseInt(condition.expr2), condition.cmp);
+                break;
+            case FLOAT:
+                BPTree<Double, Address> float_tree = FloatTreeMap.get(index.name);
+                res = float_tree.Search(Double.parseDouble(condition.expr2), condition.cmp);
+                break;
+            case CHAR:
+                BPTree<String, Address> char_tree = CharTreeMap.get(index.name);
+                res = char_tree.Search(condition.expr2, condition.cmp);
+                break;
+        }
+        return res;
+    }
+
 
     //* utilities methods
 

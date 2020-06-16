@@ -56,7 +56,6 @@ public class API {
         }
     }
 
-
     public static void Clear() {
         temp_primary = "";
         temp_attr.Clear();
@@ -190,7 +189,42 @@ public class API {
                 throw new SQLException(EType.RuntimeError, 365, "conditions cannot be both constants");
         }
 
-        
+        ArrayList<Tuple> result = new ArrayList<>();
+        WhereCond indexed_condition = null;
+        Index index = null;
+        for (WhereCond cond : where_condition) {
+            if (cond.is_expr1_attr && !cond.is_expr2_attr) {
+                if (CatalogManager.IsIndexAttr(select_table, cond.expr1)) {
+                    indexed_condition = cond;
+                    where_condition.remove(cond);
+                    index = CatalogManager.GetIndex(select_table, indexed_condition.expr1);
+                    break;
+                }
+            } else if (!cond.is_expr1_attr && cond.is_expr2_attr) {
+                if (CatalogManager.IsIndexAttr(select_table, cond.expr2)) {
+                    WhereCond tmp_cond = new WhereCond();
+                    tmp_cond.expr1 = cond.expr2;
+                    tmp_cond.expr2 = cond.expr1;
+                    tmp_cond.is_expr2_attr = cond.is_expr1_attr;
+                    tmp_cond.is_expr1_attr = cond.is_expr2_attr;
+                    tmp_cond.type1 = cond.type2;
+                    tmp_cond.type2 = cond.type1;
+                    tmp_cond.cmp = cond.cmp;
+                    indexed_condition = tmp_cond;
+                    where_condition.remove(cond);
+                    index = CatalogManager.GetIndex(select_table, indexed_condition.expr1);
+                    break;
+                }
+            }
+        }
+
+        if (indexed_condition != null) {
+            ArrayList<Address> address_list = IndexManager.Select(index, indexed_condition);
+
+            result = RecordManager.Select(select_table, address_list, where_condition);
+        } else {
+            result = RecordManager.Select(select_table, where_condition);
+        }
 
 
         //TODO check where condition match with the attributes.

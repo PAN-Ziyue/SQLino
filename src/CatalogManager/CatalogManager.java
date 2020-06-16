@@ -88,18 +88,6 @@ public class CatalogManager {
     }
 
 
-    public static void ShowCatalog() {
-
-    }
-
-    public static void ShowTable() {
-
-    }
-
-    public static void ShowIndex() {
-
-    }
-
     // table info
     public static Table GetTable(String name) {
         return table_list.get(name);
