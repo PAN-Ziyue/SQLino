@@ -166,19 +166,6 @@ public class CatalogManager {
         return false;
     }
 
-
-    public static boolean IsPrimaryKey(String table_name, String attr_name)
-            throws SQLException {
-        if (table_list.containsKey(table_name)) {
-            Table tmp = GetTable(table_name);
-            return attr_name.equals(tmp.primary_attr);
-        } else {
-            throw new SQLException(EType.RuntimeError, 1,
-                    table_name + "(table) does not exist");
-        }
-    }
-
-
     public static boolean IsUnique(String table_name, String attr_name)
             throws SQLException {
         if (table_list.containsKey(table_name)) {

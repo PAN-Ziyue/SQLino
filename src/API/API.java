@@ -7,6 +7,7 @@ import IndexManager.IndexManager;
 import RecordManager.RecordManager;
 import Utils.*;
 import Data.*;
+import com.jakewharton.fliptables.FlipTable;
 
 import java.util.*;
 
@@ -60,6 +61,7 @@ public class API {
         temp_primary = "";
         temp_attr.Clear();
         primary_defined = false;
+        temp_where_cond = new WhereCond();
         where_condition.clear();
         insert_value_list = new ArrayList<>();
         create_attr_list = new ArrayList<>();
@@ -220,25 +222,87 @@ public class API {
 
         if (indexed_condition != null) {
             ArrayList<Address> address_list = IndexManager.Select(index, indexed_condition);
-
             result = RecordManager.Select(select_table, address_list, where_condition);
         } else {
             result = RecordManager.Select(select_table, where_condition);
         }
+        System.out.println(result.size() + " tuples found:");
 
 
-        //TODO check where condition match with the attributes.
+        if (select_attr_list.size() == 0) {
+            int attr_num = CatalogManager.GetAttrNum(select_table);
+            Table tmp = CatalogManager.GetTable(select_table);
+            String[] headers = new String[attr_num];
+            for (int i = 0; i < attr_num; i++) {
+                if (tmp.attr_list.get(i).name.equals(tmp.primary_attr)) {
+                    headers[i] = "\033[1;33m" + tmp.attr_list.get(i).name +
+                            "\u001B[0m (" + tmp.attr_list.get(i).type.name() + ")";
+                } else if (tmp.attr_list.get(i).unique) {
+                    headers[i] = "\033[0;33m" + tmp.attr_list.get(i).name +
+                            "\u001B[0m (" + tmp.attr_list.get(i).type.name() + ")";
+                } else {
+                    headers[i] = tmp.attr_list.get(i).name + " (" + tmp.attr_list.get(i).type.name() + ")";
+                }
+            }
+            int final_size, remain = 0;
+            if (result.size() <= 100)
+                final_size = result.size();
+            else {
+                final_size = 100;
+                remain = result.size() - 100;
+            }
+            String[][] data = new String[final_size][attr_num];
+            for (int i = 0; i < final_size; i++) {
+                for (int j = 0; j < attr_num; j++)
+                    data[i][j] = result.get(i).value_list.get(j);
+            }
+            System.out.print(FlipTable.of(headers, data));
+            if (remain > 0)
+                System.out.println("And " + remain + " more tuples...");
+        } else {
+            int attr_num = select_attr_list.size();
+            Table tmp = CatalogManager.GetTable(select_table);
+            String[] headers = new String[attr_num];
+            for (int i = 0; i < attr_num; i++) {
+                int idx = CatalogManager.GetAttrIndex(select_table, select_attr_list.get(i));
+                if (tmp.attr_list.get(idx).name.equals(tmp.primary_attr)) {
+                    headers[i] = "\033[1;33m" + tmp.attr_list.get(idx).name +
+                            "\u001B[0m (" + tmp.attr_list.get(idx).type.name() + ")";
+                } else if (tmp.attr_list.get(idx).unique) {
+                    headers[i] = "\033[0;33m" + tmp.attr_list.get(idx).name +
+                            "\u001B[0m (" + tmp.attr_list.get(idx).type.name() + ")";
+                } else {
+                    headers[i] = tmp.attr_list.get(idx).name + " (" + tmp.attr_list.get(idx).type.name() + ")";
+                }
+            }
+            int final_size, remain = 0;
+            if (result.size() <= 100)
+                final_size = result.size();
+            else {
+                final_size = 100;
+                remain = result.size() - 100;
+            }
+            String[][] data = new String[final_size][attr_num];
+            for (int i = 0; i < final_size; i++) {
+                for (int j = 0; j < attr_num; j++) {
+                    int idx = CatalogManager.GetAttrIndex(select_table, select_attr_list.get(j));
+                    data[i][j] = result.get(i).value_list.get(idx);
+                }
+            }
+            System.out.print(FlipTable.of(headers, data));
+            if (remain > 0)
+                System.out.println("And " + remain + " more tuples...");
+        }
+
         Store();
         Clear();
     }
-
-
+    
     public static void QueryDelete() throws SQLException {
         //TODO check where condition match with the attributes.
         Store();
         Clear();
     }
-
 
     public static void QueryCreateIndex() throws SQLException {
         if (CatalogManager.IsIndexExist(create_index)) {
@@ -314,6 +378,7 @@ public class API {
             temp_where_cond.expr2 = expr2;
         }
         where_condition.add(temp_where_cond);
+        temp_where_cond = new WhereCond();
     }
 
     public static void SetDeleteTable(String delete_table) {

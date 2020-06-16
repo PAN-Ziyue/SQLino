@@ -111,21 +111,19 @@ public class RecordManager {
                 if (block == null && i == 0) {
                     throw new SQLException(EType.RuntimeError, 0, "xxx");
                 }
-                if (block.ReadInt(byte_offset) < 0) {
-                    boolean check = true;
-                    Tuple tuple = GetTuple(table_name, block, byte_offset);
-                    for (WhereCond cond : condition) {
-                        if (!CheckCondition(table_name, cond, tuple)) {
-                            check = false;
-                            break;
-                        }
-                    }
-                    if (check) {
-                        res.add(tuple);
-                    }
-                }
-                previous_offset = block_offset;
             }
+            if (block.ReadInt(byte_offset) < 0) {
+                int j;
+                Tuple data = GetTuple(table_name, block, byte_offset);
+                for (j = 0; j < condition.size(); j++) {
+                    if (!CheckCondition(table_name, condition.get(j), data))
+                        break;
+                }
+                if (i == condition.size()) {
+                    res.add(data);
+                }
+            }
+            previous_offset = block_offset;
         }
         return res;
     }
@@ -246,6 +244,8 @@ public class RecordManager {
                 }
             }
         }
+        if (cond.cmp == CMP.NOT_EQUAL)
+            return true;
         throw new SQLException(EType.RuntimeError, 0, "cannot compare");
     }
 

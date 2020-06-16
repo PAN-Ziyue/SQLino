@@ -17,3 +17,9 @@ INSERT INTO student  VALUES ('a', 178.6, 20, '7');
 INSERT INTO student VALUES('3203021999', 385, 88.7, 'hey');
 
 INSERT INTO student VALUES('3203181999', 473, 88.7, 'ziyue');
+
+SELECT * FROM student WHERE iden_number != '3203181999' AND name = 'hey';
+
+SELECT * FROM student WHERE score = 88.7;
+
+SELECT * FROM student WHERE stuid = 385 AND name = 'ziyue' ;
