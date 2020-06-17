@@ -74,6 +74,7 @@ public enum State {
 
     // execute file
     EXECFILE,
+    FILE_PARSED,
 
     // quit
     QUIT

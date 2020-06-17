@@ -6,11 +6,13 @@ import Utils.CommonUtils;
 import Utils.DefaultSetting;
 import Utils.EType;
 import Utils.SQLException;
+
 import java.util.HashSet;
 
 
 public class Interpreter {
     private static State state_code = State.IDLE;
+    public static boolean parse_script = false;
 
     private static final HashSet<String> reserved_words = new HashSet<String>() {{
         add("SELECT");
@@ -119,7 +121,7 @@ public class Interpreter {
         String[] tokens = input_string.split("\\s+");
         for (String token : tokens) {
             String upper_token = token.toUpperCase();
-            if(CommonUtils.IsReservedWord(upper_token)) {
+            if (CommonUtils.IsReservedWord(upper_token)) {
                 token = upper_token;
             }
             if (token.equals(""))
@@ -129,14 +131,24 @@ public class Interpreter {
                     if (token.equals("SELECT"))
                         state_code = State.SELECT;
                     else if (token.equals("QUIT")) {
-                        state_code = State.QUIT;
-                        return;
+                        if (parse_script) {
+                            throw new SQLException(EType.RuntimeError, 4384,
+                                    "QUIT instruction cannot be executed in script");
+                        } else {
+                            state_code = State.QUIT;
+                            return;
+                        }
                     } else if (token.equals("CREATE")) {
                         state_code = State.CREATE;
                     } else if (token.equals("INSERT")) {
                         state_code = State.INSERT;
                     } else if (token.equals("EXECFILE")) {
-                        state_code = State.EXECFILE;
+                        if (parse_script) {
+                            throw new SQLException(EType.RuntimeError, 4384,
+                                    "EXECFILE instruction cannot be executed in script");
+                        } else {
+                            state_code = State.EXECFILE;
+                        }
                     } else if (token.equals("DROP")) {
                         state_code = State.DROP;
                     } else if (token.equals("DELETE")) {
@@ -236,28 +248,19 @@ public class Interpreter {
                 }
                 break;
                 case EXECFILE: {
-                    //if (token[0] == '\\') {
-                    //	token.erase(0, 1);
-                    //	string final_filename = "";
-                    //	vector<string> parse_vec = split(token, '\\');
-                    //	for (int i = 0; i < parse_vec.size(); i++) {
-                    //		unsigned int each_char_val;
-                    //		stringstream ss;
-                    //		ss << hex << parse_vec[i];
-                    //		ss >> each_char_val;
-                    //		final_filename.push_back(each_char_val);
-                    //	}
-                    //	if (ParseFileInput(final_filename)) {
-                    //		ExecFile(final_filename);
-                    //	}
-                    //	state_code = State.IDLE;
-                    //}
-                    //else {
-                    //	PromptErr("[Syntax Error] illegal file path, expect a string");
-                    //	state_code = State.IDLE;
-                    //	return;
-                    //}
-                    state_code = State.IDLE;
+                    API.SetExecFile(token);
+                    state_code = State.FILE_PARSED;
+                }
+                break;
+                case FILE_PARSED: {
+                    if (token.equals(";")) {
+                        parse_script = true;
+                        API.QueryExecFile();
+                        parse_script = false;
+                        state_code = State.IDLE;
+                    } else {
+                        throw new SQLException(EType.SyntaxError, 10, "expect ';' to finish query");
+                    }
                 }
                 break;
                 case QUIT:
@@ -512,7 +515,7 @@ public class Interpreter {
                 break;
                 case CREATE_PRIMARY_LEFT_BRACKET: {
                     if (CommonUtils.IsLegalName(token)) {
-                        if(API.SetPrimary(token))
+                        if (API.SetPrimary(token))
                             state_code = State.PRIMARY_ATTR_PARSED;
                         else
                             throw new SQLException(EType.RuntimeError, 0, "cannot define primary key on multiple attributes");
@@ -626,12 +629,10 @@ public class Interpreter {
                     if (token.equals(",")) {
                         API.SetCreateAttrList();
                         state_code = State.CREATE_COMMA;
-                    }
-                    else if (token.equals(")")) {
+                    } else if (token.equals(")")) {
                         API.SetCreateAttrList();
                         state_code = State.CREATE_TABLE_RIGHT_BRACKET;
-                    }
-                    else {
+                    } else {
                         throw new SQLException(EType.SyntaxError, 41, "invalid argument: " + token);
                     }
                 }
@@ -778,6 +779,5 @@ public class Interpreter {
             }
         }
     }
-
 
 }

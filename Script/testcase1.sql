@@ -1,0 +1,1 @@
+CREATE TABLE student (id INT, PRIMARY KEY(id), name CHAR(12) UNIQUE, score FLOAT );

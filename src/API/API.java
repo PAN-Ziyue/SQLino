@@ -4,11 +4,15 @@ import BufferManager.BufferManager;
 import CatalogManager.CatalogManager;
 
 import IndexManager.IndexManager;
+import Interpreter.*;
 import RecordManager.RecordManager;
 import Utils.*;
 import Data.*;
 import com.jakewharton.fliptables.FlipTable;
 
+import java.io.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 
@@ -26,6 +30,7 @@ public class API {
     private static String on_attribute = "";
     private static String select_table = "";
     private static String temp_primary = "";
+    private static String exec_file = "";
     private static WhereCond temp_where_cond = new WhereCond();
     private static Attribute temp_attr = new Attribute();
 
@@ -71,6 +76,7 @@ public class API {
 
     //* query function
     public static void QueryCreateTable() throws SQLException {
+        long start_time = System.currentTimeMillis();
         if (CatalogManager.IsTableExist(create_table)) {
             throw new SQLException(EType.RuntimeError, 3,
                     "failed to create table, " + create_table + " has already existed!");
@@ -114,12 +120,19 @@ public class API {
             RecordManager.CreateTable(create_table);
             CatalogManager.CreateTable(new_table);
         }
+        long end_time = System.currentTimeMillis();
 
+        if (!Interpreter.parse_script) {
+            String success = "successfully create a table, time elapsed: "
+                    + (end_time - start_time) + "ms";
+            System.out.println("\033[1;30m" + success + "\033[0m");
+        }
         Store();
         Clear();
     }
 
     public static void QueryDropTable() throws SQLException {
+        long start_time = System.currentTimeMillis();
         if (CatalogManager.IsTableExist(drop_table)) {
             Table tmp = CatalogManager.GetTable(drop_table);
             for (Index drop_table_index : tmp.index_list) {
@@ -130,11 +143,19 @@ public class API {
         } else {
             throw new SQLException(EType.RuntimeError, 0, "xxx");
         }
+        long end_time = System.currentTimeMillis();
+
+        if (!Interpreter.parse_script) {
+            String success = "successfully drop a table, time elapsed: "
+                    + (end_time - start_time) + "ms";
+            System.out.println("\033[1;30m" + success + "\033[0m");
+        }
         Store();
         Clear();
     }
 
     public static void QueryInsert() throws SQLException {
+        long start_time = System.currentTimeMillis();
         if (!CatalogManager.IsTableExist(insert_table))
             throw new SQLException(EType.RuntimeError, 0, "xxx");
 
@@ -174,11 +195,19 @@ public class API {
             int attr_index = CatalogManager.GetAttrIndex(index.table_name, index.attr_name);
             IndexManager.Insert(index, insert_value_list.get(attr_index).val, insert_addr);
         }
+        long end_time = System.currentTimeMillis();
+
+        if (!Interpreter.parse_script) {
+            String success = "successfully insert a tuple, time elapsed: "
+                    + (end_time - start_time) + "ms";
+            System.out.println("\033[1;30m" + success + "\033[0m");
+        }
         Store();
         Clear();
     }
 
     public static void QuerySelect() throws SQLException {
+        long start_time = System.currentTimeMillis();
         if (!CatalogManager.IsTableExist(select_table))
             throw new SQLException(EType.RuntimeError, 0, "table does not exist");
 
@@ -233,93 +262,99 @@ public class API {
         } else {
             result = RecordManager.Select(select_table, where_condition);
         }
-        System.out.println(result.size() + " tuples found:");
+        long end_time = System.currentTimeMillis();
 
-        if (select_attr_list.size() == 0) {
-            int attr_num = CatalogManager.GetAttrNum(select_table);
-            Table tmp = CatalogManager.GetTable(select_table);
-            String[] headers = new String[attr_num];
-            for (int i = 0; i < attr_num; i++) {
-                String header_name;
-                if (tmp.attr_list.get(i).name.equals(tmp.primary_attr)) {
-                    header_name = tmp.attr_list.get(i).name;
-                    if (header_name.length() < 3) header_name = "  " + header_name;
-                    headers[i] = "\033[1;33m" + header_name +
-                            "\u001B[0m (" + tmp.attr_list.get(i).type.name() + ")";
-                } else if (tmp.attr_list.get(i).unique) {
-                    header_name = tmp.attr_list.get(i).name;
-                    if (header_name.length() < 3) header_name = "  " + header_name;
-                    headers[i] = "\033[0;33m" + header_name +
-                            "\u001B[0m (" + tmp.attr_list.get(i).type.name() + ")";
-                } else {
-                    header_name = tmp.attr_list.get(i).name;
-                    if (header_name.length() < 3) header_name = "  " + header_name;
-                    headers[i] = header_name + " (" + tmp.attr_list.get(i).type.name() + ")";
-                }
+        if (!Interpreter.parse_script) {
+            String success = result.size() + " tuples found:" + ", time elapsed: "
+                    + (end_time - start_time) + "ms";
+            System.out.println("\033[1;30m" + success + "\033[0m");
 
-            }
-            int final_size, remain = 0;
-            if (result.size() <= 100)
-                final_size = result.size();
-            else {
-                final_size = 100;
-                remain = result.size() - 100;
-            }
-            String[][] data = new String[final_size][attr_num];
-            for (int i = 0; i < final_size; i++) {
-                for (int j = 0; j < attr_num; j++)
-                    data[i][j] = result.get(i).value_list.get(j);
-            }
-            System.out.print(FlipTable.of(headers, data));
-            if (remain > 0)
-                System.out.println("And " + remain + " more tuples...");
-        } else {
-            int attr_num = select_attr_list.size();
-            Table tmp = CatalogManager.GetTable(select_table);
-            String[] headers = new String[attr_num];
-            for (int i = 0; i < attr_num; i++) {
-                int idx = CatalogManager.GetAttrIndex(select_table, select_attr_list.get(i));
-                String header_name;
-                if (tmp.attr_list.get(idx).name.equals(tmp.primary_attr)) {
-                    header_name = tmp.attr_list.get(i).name;
-                    if (header_name.length() < 3) header_name = "  " + header_name;
-                    headers[i] = "\033[1;33m" + header_name +
-                            "\u001B[0m (" + tmp.attr_list.get(idx).type.name() + ")";
-                } else if (tmp.attr_list.get(idx).unique) {
-                    header_name = tmp.attr_list.get(i).name;
-                    if (header_name.length() < 3) header_name = "  " + header_name;
-                    headers[i] = "\033[0;33m" + header_name +
-                            "\u001B[0m (" + tmp.attr_list.get(idx).type.name() + ")";
-                } else {
-                    header_name = tmp.attr_list.get(i).name;
-                    if (header_name.length() < 3) header_name = "  " + header_name;
-                    headers[i] = header_name + " (" + tmp.attr_list.get(idx).type.name() + ")";
+            if (select_attr_list.size() == 0) {
+                int attr_num = CatalogManager.GetAttrNum(select_table);
+                Table tmp = CatalogManager.GetTable(select_table);
+                String[] headers = new String[attr_num];
+                for (int i = 0; i < attr_num; i++) {
+                    String header_name;
+                    if (tmp.attr_list.get(i).name.equals(tmp.primary_attr)) {
+                        header_name = tmp.attr_list.get(i).name;
+                        if (header_name.length() < 3) header_name = "  " + header_name;
+                        headers[i] = "\033[1;33m" + header_name +
+                                "\u001B[0m (" + tmp.attr_list.get(i).type.name() + ")";
+                    } else if (tmp.attr_list.get(i).unique) {
+                        header_name = tmp.attr_list.get(i).name;
+                        if (header_name.length() < 3) header_name = "  " + header_name;
+                        headers[i] = "\033[0;33m" + header_name +
+                                "\u001B[0m (" + tmp.attr_list.get(i).type.name() + ")";
+                    } else {
+                        header_name = tmp.attr_list.get(i).name;
+                        if (header_name.length() < 3) header_name = "  " + header_name;
+                        headers[i] = header_name + " (" + tmp.attr_list.get(i).type.name() + ")";
+                    }
+
                 }
-            }
-            int final_size, remain = 0;
-            if (result.size() <= 100)
-                final_size = result.size();
-            else {
-                final_size = 100;
-                remain = result.size() - 100;
-            }
-            String[][] data = new String[final_size][attr_num];
-            for (int i = 0; i < final_size; i++) {
-                for (int j = 0; j < attr_num; j++) {
-                    int idx = CatalogManager.GetAttrIndex(select_table, select_attr_list.get(j));
-                    data[i][j] = result.get(i).value_list.get(idx);
+                int final_size, remain = 0;
+                if (result.size() <= DefaultSetting.DISPLAY_NUM)
+                    final_size = result.size();
+                else {
+                    final_size = DefaultSetting.DISPLAY_NUM;
+                    remain = result.size() - DefaultSetting.DISPLAY_NUM;
                 }
+                String[][] data = new String[final_size][attr_num];
+                for (int i = 0; i < final_size; i++) {
+                    for (int j = 0; j < attr_num; j++)
+                        data[i][j] = result.get(i).value_list.get(j);
+                }
+                System.out.print(FlipTable.of(headers, data));
+                if (remain > 0)
+                    System.out.println("And " + remain + " more tuples...");
+            } else {
+                int attr_num = select_attr_list.size();
+                Table tmp = CatalogManager.GetTable(select_table);
+                String[] headers = new String[attr_num];
+                for (int i = 0; i < attr_num; i++) {
+                    int idx = CatalogManager.GetAttrIndex(select_table, select_attr_list.get(i));
+                    String header_name;
+                    if (tmp.attr_list.get(idx).name.equals(tmp.primary_attr)) {
+                        header_name = tmp.attr_list.get(i).name;
+                        if (header_name.length() < 3) header_name = "  " + header_name;
+                        headers[i] = "\033[1;33m" + header_name +
+                                "\u001B[0m (" + tmp.attr_list.get(idx).type.name() + ")";
+                    } else if (tmp.attr_list.get(idx).unique) {
+                        header_name = tmp.attr_list.get(i).name;
+                        if (header_name.length() < 3) header_name = "  " + header_name;
+                        headers[i] = "\033[0;33m" + header_name +
+                                "\u001B[0m (" + tmp.attr_list.get(idx).type.name() + ")";
+                    } else {
+                        header_name = tmp.attr_list.get(i).name;
+                        if (header_name.length() < 3) header_name = "  " + header_name;
+                        headers[i] = header_name + " (" + tmp.attr_list.get(idx).type.name() + ")";
+                    }
+                }
+                int final_size, remain = 0;
+                if (result.size() <= DefaultSetting.DISPLAY_NUM)
+                    final_size = result.size();
+                else {
+                    final_size = DefaultSetting.DISPLAY_NUM;
+                    remain = result.size() - DefaultSetting.DISPLAY_NUM;
+                }
+                String[][] data = new String[final_size][attr_num];
+                for (int i = 0; i < final_size; i++) {
+                    for (int j = 0; j < attr_num; j++) {
+                        int idx = CatalogManager.GetAttrIndex(select_table, select_attr_list.get(j));
+                        data[i][j] = result.get(i).value_list.get(idx);
+                    }
+                }
+                System.out.print(FlipTable.of(headers, data));
+                if (remain > 0)
+                    System.out.println("\033[1;30m" + "And " + remain + " more tuples..." + "\033[0m");
             }
-            System.out.print(FlipTable.of(headers, data));
-            if (remain > 0)
-                System.out.println("And " + remain + " more tuples...");
         }
-
         Store();
         Clear();
     }
 
     public static void QueryDelete() throws SQLException {
+        long start_time = System.currentTimeMillis();
         if (!CatalogManager.IsTableExist(select_table))
             throw new SQLException(EType.RuntimeError, 0, "table does not exist");
 
@@ -371,11 +406,19 @@ public class API {
         }
         CatalogManager.Delete(delete_table, delete_count);
 
+        long end_time = System.currentTimeMillis();
+
+        if (!Interpreter.parse_script) {
+            String success = "successfully delete " + delete_count
+                    + " tuples, time elapsed: " + (end_time - start_time) + "ms";
+            System.out.println("\033[1;30m" + success + "\033[0m");
+        }
         Store();
         Clear();
     }
 
     public static void QueryCreateIndex() throws SQLException {
+        long start_time = System.currentTimeMillis();
         if (CatalogManager.IsIndexExist(create_index)) {
             throw new SQLException(EType.RuntimeError, 6,
                     "this index has been created: " + create_index);
@@ -398,23 +441,85 @@ public class API {
         Index index = new Index(create_index, on_table, on_attribute);
         CatalogManager.CreateIndex(index);
         IndexManager.CreateIndex(index);
+        long end_time = System.currentTimeMillis();
+
+        if (!Interpreter.parse_script) {
+            String success = "successfully create an index, time elapsed: "
+                    + (end_time - start_time) + "ms";
+            System.out.println("\033[1;30m" + success + "\033[0m");
+        }
         Store();
         Clear();
     }
 
     public static void QueryDropIndex() throws SQLException {
+        long start_time = System.currentTimeMillis();
         if (!CatalogManager.IsIndexExist(drop_index))
             throw new SQLException(EType.RuntimeError, 349,
                     "this index does not exist: " + drop_index);
         Index tmp_index = CatalogManager.GetIndex(drop_index);
         IndexManager.DropIndex(tmp_index);
         CatalogManager.DropIndex(tmp_index);
+        long end_time = System.currentTimeMillis();
+
+        if (!Interpreter.parse_script) {
+            String success = "successfully drop an index, time elapsed: "
+                    + (end_time - start_time) + "ms";
+            System.out.println("\033[1;30m" + success + "\033[0m");
+        }
         Store();
         Clear();
     }
 
     public static void QueryExecFile() throws SQLException {
-
+        int line_count = 0;
+        Interpreter.parse_script = true;
+        ArrayList<String> error_log = new ArrayList<>();
+        long start_time = System.currentTimeMillis();
+        try {
+            File script = new File(DefaultSetting.SCRIPT_DIR + "/" + exec_file);
+            BufferedReader script_br = new BufferedReader(new FileReader(script));
+            String input_line;
+            Interpreter.SetState(State.IDLE);
+            while ((input_line = script_br.readLine()) != null) {
+                line_count++;
+                if (!input_line.equals("")) {
+                    try {
+                        input_line = Interpreter.ProcessInput(input_line);
+                        Interpreter.ReadInput(input_line);
+                    } catch (Exception sql_e) {
+                        Interpreter.SetState(State.IDLE);
+                        Clear();
+                        String msg = "line: " + line_count + "\t" + sql_e.getMessage();
+                        error_log.add(msg);
+                    }
+                }
+            }
+            script_br.close();
+        } catch (Exception e) {
+            throw new SQLException(EType.RuntimeError, 244, "cannot open file: " + exec_file);
+        }
+        if (error_log.size() > 0) {
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss");
+            LocalDateTime now = LocalDateTime.now();
+            String error_path = DefaultSetting.SCRIPT_OUT_DIR + "/" + dtf.format(now) + ".log";
+            File log_file = new File(error_path);
+            try {
+                BufferedWriter bw = new BufferedWriter(new FileWriter(log_file));
+                for (String tmp : error_log) {
+                    bw.write(tmp + "\n");
+                }
+                Interpreter.parse_script = false;
+                bw.close();
+            } catch (Exception e) {
+                throw new SQLException(EType.RuntimeError, 24, "cannot write error log to file");
+            }
+            throw new SQLException(EType.RuntimeError, 3483, "script execution failed, check log file: " + error_path);
+        }
+        long end_time = System.currentTimeMillis();
+            String success = "script executed successfully, time elapsed: "
+                    + (end_time - start_time) + "ms";
+            System.out.println("\033[1;30m" + success + "\033[0m");
     }
 
 
@@ -541,5 +646,9 @@ public class API {
     public static void SetCreateAttrList() {
         create_attr_list.add(temp_attr);
         temp_attr = new Attribute();
+    }
+
+    public static void SetExecFile(String exec_file) {
+        API.exec_file = exec_file;
     }
 }

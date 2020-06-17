@@ -26,7 +26,6 @@ public class BufferManager {
         String file_path = DefaultSetting.TABLE_DIR + "/" + table_name + ".table";
         try {
             File file = new File(file_path);
-            System.out.println(file.getAbsolutePath());
             if (file.delete())
                 SetInvalid(table_name);
         } catch (Exception e) {
@@ -57,7 +56,7 @@ public class BufferManager {
     public static boolean ReadBlockFromDisk(String table_name, int block_offset, int block_id) {
         byte[] tmp_data = new byte[DefaultSetting.BLOCK_SIZE];
         String file_path = DefaultSetting.TABLE_DIR + "/" + table_name + ".table";
-        RandomAccessFile raf = null;
+        RandomAccessFile raf;
         try {
             File in = new File(file_path);
             raf = new RandomAccessFile(in, "rw");

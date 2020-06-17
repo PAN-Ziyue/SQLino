@@ -14,8 +14,4 @@ public class SQLException extends Exception {
     public String getMessage() {
         return "[" + type.name() + ": " + error_code + "] " + msg;
     }
-
-    public void PromptMsg() {
-        System.out.println("[" + type.name() + ": " + error_code + "] " + msg);
-    }
 }
