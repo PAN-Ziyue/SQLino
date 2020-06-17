@@ -22,12 +22,15 @@ public class BufferManager {
                 WriteBlockToDisk(i);
     }
 
-    public static void Drop(String table_name) {
+    public static void Drop(String table_name) throws SQLException {
         String file_path = DefaultSetting.TABLE_DIR + "/" + table_name + ".table";
         try {
             File file = new File(file_path);
-            file.delete();
+            System.out.println(file.getAbsolutePath());
+            if (file.delete())
+                SetInvalid(table_name);
         } catch (Exception e) {
+            throw new SQLException(EType.RuntimeError, 0, "cannot delete file");
         }
     }
 
@@ -89,6 +92,7 @@ public class BufferManager {
             if (!out.exists()) out.createNewFile();
             raf.seek(buffer[block_id].block_offset * DefaultSetting.BLOCK_SIZE);
             raf.write(buffer[block_id].GetBlockData());
+            raf.close();
         } catch (Exception e) {
             throw new SQLException(EType.RuntimeError, 0, "fail to save");
         }

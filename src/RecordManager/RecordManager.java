@@ -3,6 +3,7 @@ package RecordManager;
 import BufferManager.*;
 import CatalogManager.CatalogManager;
 import Data.*;
+import IndexManager.IndexManager;
 import Utils.*;
 
 import java.io.*;
@@ -21,14 +22,6 @@ public class RecordManager {
         } catch (Exception e) {
             throw new SQLException(EType.RuntimeError, 3,
                     "failed to create table, cannot create table file named " + table_name);
-        }
-    }
-
-    public static void DropTable(String table_name) {
-        String file_path = DefaultSetting.TABLE_DIR + "/" + table_name + ".table";
-        File file = new File(file_path);
-        if (file.delete()) {
-            BufferManager.SetInvalid(table_name);
         }
     }
 
@@ -119,13 +112,109 @@ public class RecordManager {
                     if (!CheckCondition(table_name, condition.get(j), data))
                         break;
                 }
-                if (i == condition.size()) {
+                if (j == condition.size()) {
                     res.add(data);
                 }
             }
             previous_offset = block_offset;
         }
         return res;
+    }
+
+    public static int Delete(String delete_table, ArrayList<WhereCond> condition)
+            throws SQLException {
+        int tuple_num = CatalogManager.GetRowNum(delete_table);
+        int store_length = CatalogManager.GetStoreLength(delete_table);
+
+        int tuple_count = 0, byte_offset = DefaultSetting.INT_SIZE, block_offset = 0;
+        int delete_count = 0, read_count = 0;
+        Block head_block = BufferManager.ReadBlock(delete_table, block_offset);
+        Block current_block = head_block;
+        if (head_block == null)
+            throw new SQLException(EType.RuntimeError, 3, "xxx");
+        head_block.is_pinned = true;
+
+        while (tuple_count < tuple_num) {
+            if (byte_offset + store_length >= DefaultSetting.BLOCK_SIZE) {
+                block_offset++;
+                byte_offset = 0;
+                current_block = BufferManager.ReadBlock(delete_table, block_offset);
+                if (current_block == null) {
+                    head_block.is_pinned = false;
+                    return delete_count;
+                }
+            }
+            if (current_block.ReadInt(byte_offset) < 0) {
+                int i;
+                Tuple tuple = GetTuple(delete_table, current_block, byte_offset);
+                for (i = 0; i < condition.size(); i++) {
+                    if (!CheckCondition(delete_table, condition.get(i), tuple))
+                        break;
+                }
+                if (i == condition.size()) {
+                    current_block.WriteInt(0, byte_offset);
+                    current_block.WriteInt(head_block.ReadInt(0), byte_offset + 1);
+                    head_block.WriteInt(read_count, 0);
+                    delete_count++;
+                    Table tmp = CatalogManager.GetTable(delete_table);
+                    for (Index index : tmp.index_list) {
+                        int attr_index = CatalogManager.GetAttrIndex(delete_table, index.attr_name);
+                        IndexManager.Delete(index, tuple.value_list.get(attr_index));
+                    }
+                }
+                tuple_count++;
+            }
+            byte_offset += store_length;
+            read_count++;
+        }
+        head_block.is_pinned = false;
+        return delete_count;
+    }
+
+    public static int Delete(String delete_table, ArrayList<Address> address_list,
+                             ArrayList<WhereCond> condition) throws SQLException {
+        if (address_list.size() == 0) return 0;
+        Collections.sort(address_list);
+        int block_offset = 0, previous_offset = -1;
+        int byte_offset = 0, tuple_offset, delete_count = 0;
+
+        Block head_block = BufferManager.ReadBlock(delete_table, block_offset);
+        Block current_block = head_block;
+        if (head_block == null)
+            throw new SQLException(EType.RuntimeError, 3443, "xxx");
+        head_block.is_pinned = true;
+        for (int i = 0; i < address_list.size(); i++) {
+            block_offset = address_list.get(i).block_offset;
+            byte_offset = address_list.get(i).byte_offset;
+            tuple_offset = GetTupleOffset(delete_table, block_offset, byte_offset);
+            if (i == 0 || block_offset != previous_offset) {
+                current_block = BufferManager.ReadBlock(delete_table, block_offset);
+                if (current_block == null) {
+                    head_block.is_pinned = false;
+                    return delete_count;
+                }
+            }
+            if (current_block.ReadInt(byte_offset) < 0) {
+                int j;
+                Tuple tuple = GetTuple(delete_table, current_block, byte_offset);
+                for (j = 0; j < condition.size(); j++)
+                    if (!CheckCondition(delete_table, condition.get(j), tuple))
+                        break;
+                if (j == condition.size()) {
+                    current_block.WriteInt(0, byte_offset);
+                    current_block.WriteInt(head_block.ReadInt(0), byte_offset + 1);
+                    head_block.WriteInt(tuple_offset, 0);
+                    delete_count++;
+                    Table tmp = CatalogManager.GetTable(delete_table);
+                    for (Index index : tmp.index_list) {
+                        int attr_index = CatalogManager.GetAttrIndex(delete_table, index.attr_name);
+                        IndexManager.Delete(index, tuple.value_list.get(attr_index));
+                    }
+                }
+            }
+        }
+        head_block.is_pinned = false;
+        return delete_count;
     }
 
 
@@ -254,6 +343,7 @@ public class RecordManager {
         int attr_num = CatalogManager.GetAttrNum(table_name);
         String attr_value = null;
         Tuple rst = new Tuple();
+
         offset++;
         for (int i = 0; i < attr_num; i++) {
             int length = CatalogManager.GetAttrLength(table_name, i);
@@ -302,6 +392,16 @@ public class RecordManager {
         } else {
             return (tuple_offset - tuple_num_first - (block_offset - 1) * tuple_num_next) * store_length;
         }
+    }
+
+    public static int GetTupleOffset(String table_name, int block_offset, int byte_offset) {
+        int store_length = CatalogManager.GetStoreLength(table_name);
+        int tuple_num_first = (DefaultSetting.BLOCK_SIZE - DefaultSetting.INT_SIZE) / store_length;
+        int tuple_num_next = DefaultSetting.BLOCK_SIZE / store_length;
+        if (block_offset == 0)
+            return (byte_offset - DefaultSetting.INT_SIZE) / store_length;
+        else
+            return tuple_num_first + (block_offset - 1) * tuple_num_next + byte_offset / store_length;
     }
 
     public static void WriteTuple(

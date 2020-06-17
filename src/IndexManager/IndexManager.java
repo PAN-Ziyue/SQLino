@@ -73,7 +73,7 @@ public class IndexManager {
 
     //* SQL operations
     public static void CreateIndex(Index index) throws SQLException {
-        int block_offset = 0, row_count = 0, byte_offset = 0;
+        int block_offset = 0, row_count = 0, byte_offset = DefaultSetting.INT_SIZE;
         int row_num = CatalogManager.GetRowNum(index.table_name);
         int store_length = CatalogManager.GetStoreLength(index.table_name);
         DataType type = CatalogManager.GetAttrType(index.table_name, index.attr_name);
@@ -206,6 +206,23 @@ public class IndexManager {
         return res;
     }
 
+    public static void Delete(Index index, String key) {
+        DataType type = CatalogManager.GetAttrType(index.table_name, index.attr_name);
+        switch (type) {
+            case INT:
+                BPTree<Integer, Address> int_tree = IntTreeMap.get(index.name);
+                int_tree.Delete(Integer.parseInt(key));
+                break;
+            case FLOAT:
+                BPTree<Double, Address> float_tree = FloatTreeMap.get(index.name);
+                float_tree.Delete(Double.parseDouble(key));
+                break;
+            case CHAR:
+                BPTree<String, Address> char_tree = CharTreeMap.get(index.name);
+                char_tree.Delete(key);
+                break;
+        }
+    }
 
     //* utilities methods
 }

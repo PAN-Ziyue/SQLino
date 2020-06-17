@@ -15,7 +15,7 @@ public class CatalogManager {
     public static LinkedHashMap<String, Index> index_list =
             new LinkedHashMap<String, Index>();
 
-    public static void Initialize() throws IOException, ClassNotFoundException {
+    public static void Initialize() throws IOException {
         InitTableCatalog();
         InitIndexCatalog();
     }
@@ -69,7 +69,6 @@ public class CatalogManager {
         output_file.close();
     }
 
-
     //* sql methods
     public static void CreateTable(Table new_table) {
         table_list.put(new_table.name, new_table);
@@ -85,6 +84,10 @@ public class CatalogManager {
 
     public static void Insert(String table_name) {
         table_list.get(table_name).row_num++;
+    }
+
+    public static void Delete(String table_name, int delete_num) {
+        table_list.get(table_name).row_num -= delete_num;
     }
 
 
@@ -109,10 +112,6 @@ public class CatalogManager {
                 return index;
         }
         throw new SQLException(EType.RuntimeError, 0, "cannot find index");
-    }
-
-    public static String GetPrimaryKey(String table_name) {
-        return GetTable(table_name).primary_attr;
     }
 
     public static int GetAttrNum(String table_name) {
@@ -183,7 +182,6 @@ public class CatalogManager {
         }
     }
 
-
     public static void CreateIndex(Index index) {
         Table tmp = GetTable(index.table_name);
         tmp.index_list.add(index);
@@ -191,8 +189,11 @@ public class CatalogManager {
         index_list.put(index.name, index);
     }
 
-    public static void DropIndex(String index_name)
-            throws SQLException {
+    public static void DropIndex(Index index) {
+        Table tmp = GetTable(index.table_name);
+        tmp.index_list.remove(index);
+        tmp.index_num -= 1;
+        index_list.remove(index.name);
 
     }
 
@@ -220,15 +221,6 @@ public class CatalogManager {
         } else {
             return DefaultSetting.INT_SIZE + DefaultSetting.CHAR_SIZE;
         }
-    }
-
-    public static int GetAttrLength(String table_name, String attr_name) {
-        Table tmp = GetTable(table_name);
-        for (Attribute attr : tmp.attr_list) {
-            if (attr.name.equals(attr_name))
-                return attr.GetLength();
-        }
-        return -1;
     }
 
     public static int GetAttrLength(String table_name, int i) {

@@ -11,6 +11,7 @@ import com.jakewharton.fliptables.FlipTable;
 
 import java.util.*;
 
+
 public class API {
 
     //* variables get from the interpreter
@@ -92,6 +93,7 @@ public class API {
             for (int i = 0; i < create_attr_list.size(); i++) {
                 if (create_attr_list.get(i).name.equals(temp_primary)) {
                     contain_primary = true;
+                    create_attr_list.get(i).primary = true;
                     create_attr_list.get(i).unique = true;// primary key must be unique
                     break;
                 }
@@ -123,7 +125,6 @@ public class API {
             for (Index drop_table_index : tmp.index_list) {
                 IndexManager.DropIndex(drop_table_index);
             }
-            RecordManager.DropTable(drop_table);
             CatalogManager.DropTable(drop_table);
             BufferManager.Drop(drop_table);
         } else {
@@ -141,8 +142,14 @@ public class API {
         if (insert_value_list.size() != tmp.attr_list.size())
             throw new SQLException(EType.RuntimeError, 0, "attribute number does not match");
         for (int i = 0; i < tmp.attr_list.size(); i++) {
-            if (tmp.attr_list.get(i).type != insert_value_list.get(i).type)
-                throw new SQLException(EType.RuntimeError, 0, "attribute type does not match");
+            if (tmp.attr_list.get(i).type != insert_value_list.get(i).type) {
+                if (tmp.attr_list.get(i).type == DataType.FLOAT
+                        && insert_value_list.get(i).type == DataType.INT) {
+                    insert_value_list.get(i).type = DataType.FLOAT;
+                } else
+                    throw new SQLException(EType.RuntimeError, 0, "attribute type does not match");
+            }
+
             if (tmp.attr_list.get(i).type == DataType.CHAR &&
                     insert_value_list.get(i).val.length() > tmp.attr_list.get(i).char_length)
                 throw new SQLException(EType.RuntimeError, 0, "exceed the char length");
@@ -228,21 +235,28 @@ public class API {
         }
         System.out.println(result.size() + " tuples found:");
 
-
         if (select_attr_list.size() == 0) {
             int attr_num = CatalogManager.GetAttrNum(select_table);
             Table tmp = CatalogManager.GetTable(select_table);
             String[] headers = new String[attr_num];
             for (int i = 0; i < attr_num; i++) {
+                String header_name;
                 if (tmp.attr_list.get(i).name.equals(tmp.primary_attr)) {
-                    headers[i] = "\033[1;33m" + tmp.attr_list.get(i).name +
+                    header_name = tmp.attr_list.get(i).name;
+                    if (header_name.length() < 3) header_name = "   " + header_name;
+                    headers[i] = "\033[1;33m" + header_name +
                             "\u001B[0m (" + tmp.attr_list.get(i).type.name() + ")";
                 } else if (tmp.attr_list.get(i).unique) {
-                    headers[i] = "\033[0;33m" + tmp.attr_list.get(i).name +
+                    header_name = tmp.attr_list.get(i).name;
+                    if (header_name.length() < 3) header_name = "   " + header_name;
+                    headers[i] = "\033[0;33m" + header_name +
                             "\u001B[0m (" + tmp.attr_list.get(i).type.name() + ")";
                 } else {
-                    headers[i] = tmp.attr_list.get(i).name + " (" + tmp.attr_list.get(i).type.name() + ")";
+                    header_name = tmp.attr_list.get(i).name;
+                    if (header_name.length() < 3) header_name = "   " + header_name;
+                    headers[i] = header_name + " (" + tmp.attr_list.get(i).type.name() + ")";
                 }
+
             }
             int final_size, remain = 0;
             if (result.size() <= 100)
@@ -265,14 +279,21 @@ public class API {
             String[] headers = new String[attr_num];
             for (int i = 0; i < attr_num; i++) {
                 int idx = CatalogManager.GetAttrIndex(select_table, select_attr_list.get(i));
+                String header_name;
                 if (tmp.attr_list.get(idx).name.equals(tmp.primary_attr)) {
-                    headers[i] = "\033[1;33m" + tmp.attr_list.get(idx).name +
+                    header_name = tmp.attr_list.get(i).name;
+                    if (header_name.length() < 3) header_name = "   " + header_name;
+                    headers[i] = "\033[1;33m" + header_name +
                             "\u001B[0m (" + tmp.attr_list.get(idx).type.name() + ")";
                 } else if (tmp.attr_list.get(idx).unique) {
-                    headers[i] = "\033[0;33m" + tmp.attr_list.get(idx).name +
+                    header_name = tmp.attr_list.get(i).name;
+                    if (header_name.length() < 3) header_name = "   " + header_name;
+                    headers[i] = "\033[0;33m" + header_name +
                             "\u001B[0m (" + tmp.attr_list.get(idx).type.name() + ")";
                 } else {
-                    headers[i] = tmp.attr_list.get(idx).name + " (" + tmp.attr_list.get(idx).type.name() + ")";
+                    header_name = tmp.attr_list.get(i).name;
+                    if (header_name.length() < 3) header_name = "   " + header_name;
+                    headers[i] = header_name + " (" + tmp.attr_list.get(idx).type.name() + ")";
                 }
             }
             int final_size, remain = 0;
@@ -297,9 +318,59 @@ public class API {
         Store();
         Clear();
     }
-    
+
     public static void QueryDelete() throws SQLException {
-        //TODO check where condition match with the attributes.
+        if (!CatalogManager.IsTableExist(select_table))
+            throw new SQLException(EType.RuntimeError, 0, "table does not exist");
+
+        for (WhereCond cond : where_condition) {
+            if (cond.is_expr1_attr && !CatalogManager.IsAttrExist(select_table, cond.expr1)) {
+                throw new SQLException(EType.RuntimeError, 0, "attribute does not exist");
+            }
+            if (cond.is_expr2_attr && !CatalogManager.IsAttrExist(select_table, cond.expr2)) {
+                throw new SQLException(EType.RuntimeError, 0, "attribute does not exist");
+            }
+            if (!cond.is_expr1_attr && !cond.is_expr2_attr)
+                throw new SQLException(EType.RuntimeError, 365, "conditions cannot be both constants");
+        }
+
+        WhereCond indexed_condition = null; // get the index
+        Index index = null;
+        for (WhereCond cond : where_condition) {
+            if (cond.is_expr1_attr && !cond.is_expr2_attr) {
+                if (CatalogManager.IsIndexAttr(select_table, cond.expr1)) {
+                    indexed_condition = cond;
+                    where_condition.remove(cond);
+                    index = CatalogManager.GetIndex(select_table, indexed_condition.expr1);
+                    break;
+                }
+            } else if (!cond.is_expr1_attr && cond.is_expr2_attr) {
+                if (CatalogManager.IsIndexAttr(select_table, cond.expr2)) {
+                    WhereCond tmp_cond = new WhereCond();
+                    tmp_cond.expr1 = cond.expr2;
+                    tmp_cond.expr2 = cond.expr1;
+                    tmp_cond.is_expr2_attr = cond.is_expr1_attr;
+                    tmp_cond.is_expr1_attr = cond.is_expr2_attr;
+                    tmp_cond.type1 = cond.type2;
+                    tmp_cond.type2 = cond.type1;
+                    tmp_cond.cmp = cond.cmp;
+                    indexed_condition = tmp_cond;
+                    where_condition.remove(cond);
+                    index = CatalogManager.GetIndex(select_table, indexed_condition.expr1);
+                    break;
+                }
+            }
+        }
+
+        int delete_count;
+        if (indexed_condition != null) {
+            ArrayList<Address> address_list = IndexManager.Select(index, indexed_condition);
+            delete_count = RecordManager.Delete(delete_table, address_list, where_condition);
+        } else {
+            delete_count = RecordManager.Delete(delete_table, where_condition);
+        }
+        CatalogManager.Delete(delete_table, delete_count);
+
         Store();
         Clear();
     }
@@ -332,6 +403,17 @@ public class API {
     }
 
     public static void QueryDropIndex() throws SQLException {
+        if (!CatalogManager.IsIndexExist(drop_index))
+            throw new SQLException(EType.RuntimeError, 349,
+                    "this index does not exist: " + drop_index);
+        Index tmp_index = CatalogManager.GetIndex(drop_index);
+        IndexManager.DropIndex(tmp_index);
+        CatalogManager.DropIndex(tmp_index);
+        Store();
+        Clear();
+    }
+
+    public static void QueryExecFile() throws SQLException {
 
     }
 

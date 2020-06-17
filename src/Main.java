@@ -20,11 +20,8 @@ public class Main {
                 BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
                 String input_string;
                 while (Interpreter.GetState() != State.QUIT) {
-                    if (Interpreter.GetState() == State.IDLE)
-                        System.out.print(" >> ");
-                    else
-                        System.out.print("    ");
-
+                    if (Interpreter.GetState() == State.IDLE) System.out.print(" >> ");
+                    else System.out.print("    ");
                     input_string = br.readLine();
                     if (!input_string.equals("")) {
                         try {
@@ -33,7 +30,7 @@ public class Main {
                         } catch (Exception e) {
                             Interpreter.SetState(State.IDLE);
                             API.Clear();
-                            System.out.println(e.getMessage());
+                            System.out.println("\033[1;31m" + e.getMessage() + "\033[0m");
                         }
                     }
                 }

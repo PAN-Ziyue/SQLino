@@ -1,25 +1,6 @@
-CREATE TABLE student (iden_number CHAR(18) UNIQUE, PRIMARY KEY(stuid),  stuid INT, score FLOAT, name CHAR(20));
-
-DROP TABLE student;
-
-
-CREATE INDEX studentid ON student ( stuid);
-
-CREATE INDEX studentid ON student (name);
-
-CREATE INDEX student_iden ON student (iden_number);
-
-
-INSERT INTO student_iden  VALUES ('a', 178.6);  
-
-INSERT INTO student  VALUES ('a', 178.6, 20, '7');
-
-INSERT INTO student VALUES('3203021999', 385, 88.7, 'hey');
-
-INSERT INTO student VALUES('3203181999', 473, 88.7, 'ziyue');
-
-SELECT * FROM student WHERE iden_number != '3203181999' AND name = 'hey';
-
-SELECT * FROM student WHERE score = 88.7;
-
-SELECT * FROM student WHERE stuid = 385 AND name = 'ziyue' ;
+CREATE TABLE student (id INT, PRIMARY KEY(id), name CHAR(12) UNIQUE, score FLOAT );
+insert into student values(1080100001,'name1',99);
+insert into student values(1080100002,'name2',52.5);
+insert into student values(1080100003,'name3',98.5);
+insert into student values(1080100004,'name4',91.5);
+insert into student values(1080100005,'name5',72.5);
