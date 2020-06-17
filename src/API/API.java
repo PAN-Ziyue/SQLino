@@ -243,17 +243,17 @@ public class API {
                 String header_name;
                 if (tmp.attr_list.get(i).name.equals(tmp.primary_attr)) {
                     header_name = tmp.attr_list.get(i).name;
-                    if (header_name.length() < 3) header_name = "   " + header_name;
+                    if (header_name.length() < 3) header_name = "  " + header_name;
                     headers[i] = "\033[1;33m" + header_name +
                             "\u001B[0m (" + tmp.attr_list.get(i).type.name() + ")";
                 } else if (tmp.attr_list.get(i).unique) {
                     header_name = tmp.attr_list.get(i).name;
-                    if (header_name.length() < 3) header_name = "   " + header_name;
+                    if (header_name.length() < 3) header_name = "  " + header_name;
                     headers[i] = "\033[0;33m" + header_name +
                             "\u001B[0m (" + tmp.attr_list.get(i).type.name() + ")";
                 } else {
                     header_name = tmp.attr_list.get(i).name;
-                    if (header_name.length() < 3) header_name = "   " + header_name;
+                    if (header_name.length() < 3) header_name = "  " + header_name;
                     headers[i] = header_name + " (" + tmp.attr_list.get(i).type.name() + ")";
                 }
 
@@ -282,17 +282,17 @@ public class API {
                 String header_name;
                 if (tmp.attr_list.get(idx).name.equals(tmp.primary_attr)) {
                     header_name = tmp.attr_list.get(i).name;
-                    if (header_name.length() < 3) header_name = "   " + header_name;
+                    if (header_name.length() < 3) header_name = "  " + header_name;
                     headers[i] = "\033[1;33m" + header_name +
                             "\u001B[0m (" + tmp.attr_list.get(idx).type.name() + ")";
                 } else if (tmp.attr_list.get(idx).unique) {
                     header_name = tmp.attr_list.get(i).name;
-                    if (header_name.length() < 3) header_name = "   " + header_name;
+                    if (header_name.length() < 3) header_name = "  " + header_name;
                     headers[i] = "\033[0;33m" + header_name +
                             "\u001B[0m (" + tmp.attr_list.get(idx).type.name() + ")";
                 } else {
                     header_name = tmp.attr_list.get(i).name;
-                    if (header_name.length() < 3) header_name = "   " + header_name;
+                    if (header_name.length() < 3) header_name = "  " + header_name;
                     headers[i] = header_name + " (" + tmp.attr_list.get(idx).type.name() + ")";
                 }
             }
