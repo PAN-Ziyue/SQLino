@@ -3,7 +3,6 @@ package CatalogManager;
 import Data.*;
 
 import java.io.*;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
 import Utils.*;
@@ -89,7 +88,21 @@ public class CatalogManager {
     public static void Delete(String table_name, int delete_num) {
         table_list.get(table_name).row_num -= delete_num;
     }
+    
+    public static void CreateIndex(Index index) {
+        Table tmp = GetTable(index.table_name);
+        tmp.index_list.add(index);
+        tmp.index_num += 1;
+        index_list.put(index.name, index);
+    }
 
+    public static void DropIndex(Index index) {
+        Table tmp = GetTable(index.table_name);
+        tmp.index_list.remove(index);
+        tmp.index_num -= 1;
+        index_list.remove(index.name);
+
+    }
 
     // table info
     public static Table GetTable(String name) {
@@ -100,7 +113,7 @@ public class CatalogManager {
         if (index_list.containsKey(name)) {
             return index_list.get(name);
         } else {
-            throw new SQLException(EType.RuntimeError, 3,
+            throw new SQLException(EType.RuntimeError, 34,
                     name + "(index) does not exist");
         }
     }
@@ -111,14 +124,14 @@ public class CatalogManager {
             if (index.attr_name.equals(attr_name))
                 return index;
         }
-        throw new SQLException(EType.RuntimeError, 0, "cannot find index");
+        throw new SQLException(EType.RuntimeError, 35, "cannot find index");
     }
 
     public static int GetAttrNum(String table_name) {
         return GetTable(table_name).attr_num;
     }
 
-    public static int GetRowNum(String table_name) {
+    public static int GetTupleNum(String table_name) {
         return GetTable(table_name).row_num;
     }
 
@@ -174,27 +187,12 @@ public class CatalogManager {
                     return i.unique;
                 }
             }
-            throw new SQLException(EType.RuntimeError, 2,
+            throw new SQLException(EType.RuntimeError, 36,
                     attr_name + "(attribute) does not exist");
         } else {
-            throw new SQLException(EType.RuntimeError, 1,
+            throw new SQLException(EType.RuntimeError, 37,
                     table_name + "(table) does not exist");
         }
-    }
-
-    public static void CreateIndex(Index index) {
-        Table tmp = GetTable(index.table_name);
-        tmp.index_list.add(index);
-        tmp.index_num += 1;
-        index_list.put(index.name, index);
-    }
-
-    public static void DropIndex(Index index) {
-        Table tmp = GetTable(index.table_name);
-        tmp.index_list.remove(index);
-        tmp.index_num -= 1;
-        index_list.remove(index.name);
-
     }
 
     public static int GetAttrIndex(String table_name, String attr_name) throws SQLException {
@@ -205,16 +203,16 @@ public class CatalogManager {
                 return index;
             index++;
         }
-        throw new SQLException(EType.RuntimeError, 1,
+        throw new SQLException(EType.RuntimeError, 37,
                 table_name + "(table) does not exist");
     }
 
-    public static int GetRowLength(String table_name) {
+    public static int GetTupleLength(String table_name) {
         return GetTable(table_name).row_length;
     }
 
     public static int GetStoreLength(String table_name) {
-        int row_length = GetRowLength(table_name);
+        int row_length = GetTupleLength(table_name);
 
         if (row_length > DefaultSetting.INT_SIZE) {
             return row_length + DefaultSetting.CHAR_SIZE;
@@ -226,5 +224,4 @@ public class CatalogManager {
     public static int GetAttrLength(String table_name, int i) {
         return GetTable(table_name).attr_list.get(i).GetLength();
     }
-
 }

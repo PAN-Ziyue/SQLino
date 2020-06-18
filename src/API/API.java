@@ -17,7 +17,6 @@ import java.util.*;
 
 
 public class API {
-
     //* variables get from the interpreter
     private static boolean primary_defined = false;
     private static String delete_table = "";
@@ -47,8 +46,8 @@ public class API {
             IndexManager.Initialize();
             BufferManager.Initialize();
         } catch (Exception e) {
-            throw new SQLException(EType.RuntimeError, 3,
-                    "failed to initialize API, quit MiniSQL now!");
+            throw new SQLException(EType.RuntimeError, 1,
+                    "failed to initialize API");
         }
     }
 
@@ -58,8 +57,8 @@ public class API {
             BufferManager.Store();
             IndexManager.Store();
         } catch (Exception e) {
-            throw new SQLException(EType.RuntimeError, 9,
-                    "failed to save ");
+            throw new SQLException(EType.RuntimeError, 2,
+                    "failed to save");
         }
     }
 
@@ -82,12 +81,12 @@ public class API {
                     "failed to create table, " + create_table + " has already existed!");
         }
         if (create_attr_list.size() > 32)
-            throw new SQLException(EType.RuntimeError, 0, "too many attributes");
+            throw new SQLException(EType.RuntimeError, 4, "too many attributes");
 
         HashSet<String> check_duplicate_attr = new HashSet<>();
         for (Attribute attr : create_attr_list) {
             if (check_duplicate_attr.contains(attr.name)) {
-                throw new SQLException(EType.RuntimeError, 3,
+                throw new SQLException(EType.RuntimeError, 5,
                         "failed to create table, " + attr.name + " has duplicate attributes!");
             } else {
                 check_duplicate_attr.add(attr.name);
@@ -105,7 +104,7 @@ public class API {
                 }
             }
             if (!contain_primary)
-                throw new SQLException(EType.RuntimeError, 3,
+                throw new SQLException(EType.RuntimeError, 6,
                         "failed to create table, " + temp_primary + " is not a defined attribute!");
 
             Table new_table = new Table(create_table, create_attr_list, temp_primary);
@@ -141,7 +140,8 @@ public class API {
             CatalogManager.DropTable(drop_table);
             BufferManager.Drop(drop_table);
         } else {
-            throw new SQLException(EType.RuntimeError, 0, "xxx");
+            throw new SQLException(EType.RuntimeError, 7,
+                    "cannot drop table, table does not exist!");
         }
         long end_time = System.currentTimeMillis();
 
@@ -157,23 +157,24 @@ public class API {
     public static void QueryInsert() throws SQLException {
         long start_time = System.currentTimeMillis();
         if (!CatalogManager.IsTableExist(insert_table))
-            throw new SQLException(EType.RuntimeError, 0, "xxx");
+            throw new SQLException(EType.RuntimeError, 8,
+                    "cannot insert value, table does not exist!");
 
         Table tmp = CatalogManager.GetTable(insert_table);
         if (insert_value_list.size() != tmp.attr_list.size())
-            throw new SQLException(EType.RuntimeError, 0, "attribute number does not match");
+            throw new SQLException(EType.RuntimeError, 9, "attribute number does not match");
         for (int i = 0; i < tmp.attr_list.size(); i++) {
             if (tmp.attr_list.get(i).type != insert_value_list.get(i).type) {
                 if (tmp.attr_list.get(i).type == DataType.FLOAT
                         && insert_value_list.get(i).type == DataType.INT) {
                     insert_value_list.get(i).type = DataType.FLOAT;
                 } else
-                    throw new SQLException(EType.RuntimeError, 0, "attribute type does not match");
+                    throw new SQLException(EType.RuntimeError, 10, "attribute type does not match");
             }
 
             if (tmp.attr_list.get(i).type == DataType.CHAR &&
                     insert_value_list.get(i).val.length() > tmp.attr_list.get(i).char_length)
-                throw new SQLException(EType.RuntimeError, 0, "exceed the char length");
+                throw new SQLException(EType.RuntimeError, 11, "exceed the char length");
             // check unique
             if (tmp.attr_list.get(i).unique) {
                 WhereCond check_unique_cond = new WhereCond();
@@ -185,7 +186,7 @@ public class API {
                 check_unique_cond.type2 = insert_value_list.get(i).type;
                 where_condition.add(check_unique_cond);
                 if (RecordManager.Select(insert_table, where_condition).size() != 0)
-                    throw new SQLException(EType.RuntimeError, 0, "duplicate unique attribute");
+                    throw new SQLException(EType.RuntimeError, 12, "duplicate unique attribute");
             }
         }
 
@@ -209,22 +210,22 @@ public class API {
     public static void QuerySelect() throws SQLException {
         long start_time = System.currentTimeMillis();
         if (!CatalogManager.IsTableExist(select_table))
-            throw new SQLException(EType.RuntimeError, 0, "table does not exist");
+            throw new SQLException(EType.RuntimeError, 13, "table does not exist");
 
         for (String attr_name : select_attr_list) {
             if (!CatalogManager.IsAttrExist(select_table, attr_name))
-                throw new SQLException(EType.RuntimeError, 0, "attribute does not exist");
+                throw new SQLException(EType.RuntimeError, 14, "attribute does not exist");
         }
 
         for (WhereCond cond : where_condition) {
             if (cond.is_expr1_attr && !CatalogManager.IsAttrExist(select_table, cond.expr1)) {
-                throw new SQLException(EType.RuntimeError, 0, "attribute does not exist");
+                throw new SQLException(EType.RuntimeError, 15, "attribute does not exist");
             }
             if (cond.is_expr2_attr && !CatalogManager.IsAttrExist(select_table, cond.expr2)) {
-                throw new SQLException(EType.RuntimeError, 0, "attribute does not exist");
+                throw new SQLException(EType.RuntimeError, 15, "attribute does not exist");
             }
             if (!cond.is_expr1_attr && !cond.is_expr2_attr)
-                throw new SQLException(EType.RuntimeError, 365, "conditions cannot be both constants");
+                throw new SQLException(EType.RuntimeError, 16, "conditions cannot be both constants");
         }
 
         ArrayList<Tuple> result = new ArrayList<>();
@@ -356,17 +357,17 @@ public class API {
     public static void QueryDelete() throws SQLException {
         long start_time = System.currentTimeMillis();
         if (!CatalogManager.IsTableExist(select_table))
-            throw new SQLException(EType.RuntimeError, 0, "table does not exist");
+            throw new SQLException(EType.RuntimeError, 17, "cannot delete, table does not exist");
 
         for (WhereCond cond : where_condition) {
             if (cond.is_expr1_attr && !CatalogManager.IsAttrExist(select_table, cond.expr1)) {
-                throw new SQLException(EType.RuntimeError, 0, "attribute does not exist");
+                throw new SQLException(EType.RuntimeError, 18, "attribute does not exist");
             }
             if (cond.is_expr2_attr && !CatalogManager.IsAttrExist(select_table, cond.expr2)) {
-                throw new SQLException(EType.RuntimeError, 0, "attribute does not exist");
+                throw new SQLException(EType.RuntimeError, 18, "attribute does not exist");
             }
             if (!cond.is_expr1_attr && !cond.is_expr2_attr)
-                throw new SQLException(EType.RuntimeError, 365, "conditions cannot be both constants");
+                throw new SQLException(EType.RuntimeError, 19, "conditions cannot be both constants");
         }
 
         WhereCond indexed_condition = null; // get the index
@@ -420,23 +421,24 @@ public class API {
     public static void QueryCreateIndex() throws SQLException {
         long start_time = System.currentTimeMillis();
         if (CatalogManager.IsIndexExist(create_index)) {
-            throw new SQLException(EType.RuntimeError, 6,
+            throw new SQLException(EType.RuntimeError, 20,
                     "this index has been created: " + create_index);
         }
         if (!CatalogManager.IsTableExist(on_table)) {
-            throw new SQLException(EType.RuntimeError, 5,
+            throw new SQLException(EType.RuntimeError, 21,
                     "this table does not exist: " + on_table);
         }
         if (!CatalogManager.IsAttrExist(on_table, on_attribute)) {
-            throw new SQLException(EType.RuntimeError, 7,
+            throw new SQLException(EType.RuntimeError, 22,
                     "this attribute does not exist: " + on_attribute);
         }
         if (CatalogManager.IsIndexAttr(on_table, on_attribute)) {
-            throw new SQLException(EType.RuntimeError, 8,
+            throw new SQLException(EType.RuntimeError, 23,
                     "this attribute has been created index on");
         }
         if (!CatalogManager.IsUnique(on_table, on_attribute)) {
-            throw new SQLException(EType.RuntimeError, 0, "xxx");
+            throw new SQLException(EType.RuntimeError, 24,
+                    "cannot create index on not-unique attribute");
         }
         Index index = new Index(create_index, on_table, on_attribute);
         CatalogManager.CreateIndex(index);
@@ -455,7 +457,7 @@ public class API {
     public static void QueryDropIndex() throws SQLException {
         long start_time = System.currentTimeMillis();
         if (!CatalogManager.IsIndexExist(drop_index))
-            throw new SQLException(EType.RuntimeError, 349,
+            throw new SQLException(EType.RuntimeError, 25,
                     "this index does not exist: " + drop_index);
         Index tmp_index = CatalogManager.GetIndex(drop_index);
         IndexManager.DropIndex(tmp_index);
@@ -497,7 +499,7 @@ public class API {
             }
             script_br.close();
         } catch (Exception e) {
-            throw new SQLException(EType.RuntimeError, 244, "cannot open file: " + exec_file);
+            throw new SQLException(EType.RuntimeError, 26, "cannot open file: " + exec_file);
         }
         if (error_log.size() > 0) {
             DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss");
@@ -512,14 +514,16 @@ public class API {
                 Interpreter.parse_script = false;
                 bw.close();
             } catch (Exception e) {
-                throw new SQLException(EType.RuntimeError, 24, "cannot write error log to file");
+                throw new SQLException(EType.RuntimeError, 27,
+                        "cannot write error log to file");
             }
-            throw new SQLException(EType.RuntimeError, 3483, "script execution failed, check log file: " + error_path);
+            throw new SQLException(EType.RuntimeError, 28,
+                    "script execution failed, check log file: " + error_path);
         }
         long end_time = System.currentTimeMillis();
-            String success = "script executed successfully, time elapsed: "
-                    + (end_time - start_time) + "ms";
-            System.out.println("\033[1;30m" + success + "\033[0m");
+        String success = "script executed successfully, time elapsed: "
+                + (end_time - start_time) + "ms";
+        System.out.println("\033[1;30m" + success + "\033[0m");
     }
 
 
@@ -612,12 +616,9 @@ public class API {
         temp_attr.type = type;
     }
 
-    public static void SetAttrLength(int length) throws SQLException {
+    public static void SetAttrLength(int length) {
         if (length >= 1 && length <= 255) {
             temp_attr.char_length = length;
-        } else {
-            throw new SQLException(EType.RuntimeError, 5,
-                    "this table does not exist: " + on_table);
         }
     }
 
@@ -625,13 +626,13 @@ public class API {
         temp_attr.unique = true;
     }
 
-    public static boolean SetPrimary(String attr_name) {
+    public static void SetPrimary(String attr_name) throws SQLException {
         if (primary_defined) {
-            return false;
+            throw new SQLException(EType.RuntimeError, 1,
+                    "cannot define primary key on multiple attributes");
         } else {
             primary_defined = true;
             temp_primary = attr_name;
-            return true;
         }
     }
 

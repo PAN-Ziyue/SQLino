@@ -29,7 +29,7 @@ public class BufferManager {
             if (file.delete())
                 SetInvalid(table_name);
         } catch (Exception e) {
-            throw new SQLException(EType.RuntimeError, 0, "cannot delete file");
+            throw new SQLException(EType.RuntimeError, 38, "cannot delete file");
         }
     }
 
@@ -93,7 +93,7 @@ public class BufferManager {
             raf.write(buffer[block_id].GetBlockData());
             raf.close();
         } catch (Exception e) {
-            throw new SQLException(EType.RuntimeError, 0, "fail to save");
+            throw new SQLException(EType.RuntimeError, 39, "fail to save");
         }
     }
 

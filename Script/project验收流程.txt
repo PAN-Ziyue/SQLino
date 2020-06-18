@@ -16,7 +16,7 @@ select * from student where id!=1080109998; --考察int类型上的不等条件�
 select * from student where score != 98.5; --考察float类型上的不等条件查询，观察数量
 
 —-6
-select * from student where name!='name9998’; --考察char类型上的不等条件查询，观察数量 
+select * from student where name!='name9998'; --考察char类型上的不等条件查询，观察数量 
 
 —-7
 select * from student where score>80 and score<85; --考察多条件and查询，观察数量 
@@ -35,25 +35,25 @@ create index stuidx on student ( name ); --在name这个unique属性上创建ind
 select * from student where name='name245'; --此处需观察执行时间t2
 
 —-12
-insert into student values(1080197996,’name97996’,100); --考察在建立b+树后再插入数据，b+树有没有做好insert
+insert into student values(1080197996,'name97996',100); --考察在建立b+树后再插入数据，b+树有没有做好insert
 
 —-13
-select * from student where name='name97996’; --此处需观察执行时间t3
+select * from student where name='name97996'; --此处需观察执行时间t3
 
 —-14
-delete from student where name='name97996’; --考察delete，同时考察b+树的delete
+delete from student where name='name97996'; --考察delete，同时考察b+树的delete
 
 —-15
-select * from student where name='name97996’;
+select * from student where name='name97996';
 
 —-16
-insert into student values(1080197996,’name97996’,100);
+insert into student values(1080197996,'name97996',100);
 
 —-17
-drop index stuidx; --考察drop index
+drop index student_default_index; --考察drop index
 
 —-18
-select * from student where name='name97996’; --需观察此处的执行时间t4
+select * from student where name='name97996'; --需观察此处的执行时间t4
 
 —-19
 select * from student where name='name245'; --需观察此处的执行时间t5

@@ -74,7 +74,7 @@ public class IndexManager {
     //* SQL operations
     public static void CreateIndex(Index index) throws SQLException {
         int block_offset = 0, row_count = 0, byte_offset = DefaultSetting.INT_SIZE;
-        int row_num = CatalogManager.GetRowNum(index.table_name);
+        int row_num = CatalogManager.GetTupleNum(index.table_name);
         int store_length = CatalogManager.GetStoreLength(index.table_name);
         DataType type = CatalogManager.GetAttrType(index.table_name, index.attr_name);
         int tuple_index = CatalogManager.GetAttrIndex(index.table_name, index.attr_name);
@@ -90,7 +90,7 @@ public class IndexManager {
                         byte_offset = 0;
                         tmp_block = BufferManager.ReadBlock(index.table_name, block_offset);
                         if (tmp_block == null) {
-                            throw new SQLException(EType.RuntimeError, 0, "xxx");
+                            throw new SQLException(EType.RuntimeError, 30, "read block failed");
                         }
                     }
                     if (tmp_block.ReadInt(byte_offset) < 0) {
@@ -112,7 +112,7 @@ public class IndexManager {
                         byte_offset = 0;
                         tmp_block = BufferManager.ReadBlock(index.table_name, block_offset);
                         if (tmp_block == null) {
-                            throw new SQLException(EType.RuntimeError, 0, "xxx");
+                            throw new SQLException(EType.RuntimeError, 30, "read block failed");
                         }
                     }
                     if (tmp_block.ReadInt(byte_offset) < 0) {
@@ -134,7 +134,7 @@ public class IndexManager {
                         byte_offset = 0;
                         tmp_block = BufferManager.ReadBlock(index.table_name, block_offset);
                         if (tmp_block == null) {
-                            throw new RuntimeException();
+                            throw new SQLException(EType.RuntimeError, 30, "read block failed");
                         }
                     }
                     if (tmp_block.ReadInt(byte_offset) < 0) {
@@ -223,6 +223,4 @@ public class IndexManager {
                 break;
         }
     }
-
-    //* utilities methods
 }

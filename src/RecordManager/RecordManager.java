@@ -20,14 +20,14 @@ public class RecordManager {
                 table_block.WriteInt(-1, 0);
             }
         } catch (Exception e) {
-            throw new SQLException(EType.RuntimeError, 3,
+            throw new SQLException(EType.RuntimeError, 31,
                     "failed to create table, cannot create table file named " + table_name);
         }
     }
 
     public static Address Insert(String table_name, ArrayList<InsertVal> insert_value_list)
             throws SQLException {
-        int tuple_num = CatalogManager.GetRowNum(table_name);
+        int tuple_num = CatalogManager.GetTupleNum(table_name);
         Block header = BufferManager.ReadBlock(table_name, 0);
         if (header == null) throw new SQLException(EType.RuntimeError, 3, "xxx");
         header.is_pinned = true;
@@ -42,7 +42,7 @@ public class RecordManager {
 
         Block insert_block = BufferManager.ReadBlock(table_name, block_offset);
         if (insert_block == null)
-            throw new SQLException(EType.RuntimeError, 2, "cannot find block to insert");
+            throw new SQLException(EType.RuntimeError, 32, "cannot find block to insert");
         if (free_offset >= 0) {
             free_offset = insert_block.ReadInt(byte_offset + 1);
             header.WriteInt(free_offset, 0);
@@ -54,7 +54,7 @@ public class RecordManager {
 
     public static ArrayList<Tuple> Select(String table_name, ArrayList<WhereCond> condition)
             throws SQLException {
-        int row_num = CatalogManager.GetRowNum(table_name);
+        int row_num = CatalogManager.GetTupleNum(table_name);
         int store_length = CatalogManager.GetStoreLength(table_name);
         int row_count = 0, block_offset = 0;
         int byte_offset = DefaultSetting.INT_SIZE;
@@ -62,7 +62,7 @@ public class RecordManager {
 
         Block block = BufferManager.ReadBlock(table_name, block_offset);
         if (block == null)
-            throw new SQLException(EType.RuntimeError, 3, "xxx");
+            throw new SQLException(EType.RuntimeError, 30, "read block failed");
         while (row_count < row_num) {
             if (byte_offset + store_length >= DefaultSetting.BLOCK_SIZE) {
                 block_offset++;
@@ -102,7 +102,7 @@ public class RecordManager {
             if (i == 0 || block_offset != previous_offset) {
                 block = BufferManager.ReadBlock(table_name, block_offset);
                 if (block == null && i == 0) {
-                    throw new SQLException(EType.RuntimeError, 0, "xxx");
+                    throw new SQLException(EType.RuntimeError, 30, "read block failed");
                 }
             }
             if (block.ReadInt(byte_offset) < 0) {
@@ -123,7 +123,7 @@ public class RecordManager {
 
     public static int Delete(String delete_table, ArrayList<WhereCond> condition)
             throws SQLException {
-        int tuple_num = CatalogManager.GetRowNum(delete_table);
+        int tuple_num = CatalogManager.GetTupleNum(delete_table);
         int store_length = CatalogManager.GetStoreLength(delete_table);
 
         int tuple_count = 0, byte_offset = DefaultSetting.INT_SIZE, block_offset = 0;
@@ -131,7 +131,7 @@ public class RecordManager {
         Block head_block = BufferManager.ReadBlock(delete_table, block_offset);
         Block current_block = head_block;
         if (head_block == null)
-            throw new SQLException(EType.RuntimeError, 3, "xxx");
+            throw new SQLException(EType.RuntimeError, 30, "read block failed");
         head_block.is_pinned = true;
 
         while (tuple_count < tuple_num) {
@@ -181,7 +181,7 @@ public class RecordManager {
         Block head_block = BufferManager.ReadBlock(delete_table, block_offset);
         Block current_block = head_block;
         if (head_block == null)
-            throw new SQLException(EType.RuntimeError, 3443, "xxx");
+            throw new SQLException(EType.RuntimeError, 30, "read block failed");
         head_block.is_pinned = true;
         for (int i = 0; i < address_list.size(); i++) {
             block_offset = address_list.get(i).block_offset;
@@ -335,7 +335,7 @@ public class RecordManager {
         }
         if (cond.cmp == CMP.NOT_EQUAL)
             return true;
-        throw new SQLException(EType.RuntimeError, 0, "cannot compare");
+        throw new SQLException(EType.RuntimeError, 33, "cannot compare this two expressions");
     }
 
 
