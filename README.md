@@ -24,5 +24,3 @@
 open the project directory as project by intellj IDEA, build and run.
 ```
 
-
-
